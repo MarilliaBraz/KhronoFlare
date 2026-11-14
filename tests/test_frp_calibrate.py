@@ -192,3 +192,13 @@ def test_fit_rejects_missing_frp():
         fit(np.array([1.0, np.nan, 2.0, 3.0]), np.zeros(4), np.ones(4))
     with pytest.raises(ValueError, match="positivo"):
         fit(np.ones(4), np.zeros(4), np.array([1.0, 2.0, np.nan, 3.0]))
+
+
+def test_bin_with_too_few_pairs_uses_global_smearing():
+    p = _synthetic(n=4000, sigma=0.3)
+    edge = p["vza"] >= 60
+    p = pd.concat([p[~edge], p[edge].head(10)])               # faixa 60–70° com só 10 pares
+    cal = fit(p["frp_modis"], p["vza"], p["frp_viirs"])
+    assert cal.smearing_by_bin[6] == pytest.approx(cal.smearing)
+    own = fit(p["frp_modis"], p["vza"], p["frp_viirs"], min_per_bin=5)
+    assert own.smearing_by_bin[6] != pytest.approx(own.smearing)

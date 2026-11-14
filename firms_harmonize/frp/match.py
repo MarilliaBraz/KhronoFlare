@@ -97,6 +97,7 @@ def match_pairs(modis: pd.DataFrame, viirs: pd.DataFrame, max_dt_min: int = MAX_
 # ---------- etapa 5 do fluxograma: remoção de pares anômalos pelo IQR ----------
 
 IQR_K = 1.5
+MIN_PER_BIN = 30  # abaixo disso os quartis de uma faixa são instáveis: usa os limites globais
 VZA_BIN_DEG = 10
 
 
@@ -106,7 +107,7 @@ def _iqr_limits(values: np.ndarray, k: float) -> tuple[float, float]:
 
 
 def outlier_mask(pairs: pd.DataFrame, bin_width: float | None = VZA_BIN_DEG, k: float = IQR_K,
-                 reference=None) -> np.ndarray:
+                 reference=None, min_per_bin: int = MIN_PER_BIN) -> np.ndarray:
     """True nos pares anômalos: ln(ΣFRP_V / FRP_M) fora de [Q1 − k·IQR, Q3 + k·IQR].
 
     Os limites são calculados por faixa de VZA (padrão 10°), porque a razão muda com o ângulo e
@@ -115,7 +116,8 @@ def outlier_mask(pairs: pd.DataFrame, bin_width: float | None = VZA_BIN_DEG, k: 
 
     `reference` (máscara booleana) escolhe os pares usados para calcular os limites, que depois
     valem para todos. Na validação fora da amostra, a referência é só o treino: assim os anos de
-    teste não influenciam o próprio filtro. Faixa sem pares de referência usa os limites globais.
+    teste não influenciam o próprio filtro. Faixa com menos de `min_per_bin` pares de referência
+    usa os limites globais.
     """
     frp_m, frp_v = pairs["frp_modis"].to_numpy(float), pairs["frp_viirs"].to_numpy(float)
     vza = pairs["vza"].to_numpy(float)
@@ -130,6 +132,6 @@ def outlier_mask(pairs: pd.DataFrame, bin_width: float | None = VZA_BIN_DEG, k: 
     out = ~valid
     for g in np.unique(group[valid]):
         sel, rsel = valid & (group == g), ref & (group == g)
-        low, high = _iqr_limits(log_ratio[rsel], k) if rsel.any() else global_limits
+        low, high = _iqr_limits(log_ratio[rsel], k) if rsel.sum() >= min_per_bin else global_limits
         out[sel] = (log_ratio[sel] < low) | (log_ratio[sel] > high)
     return out

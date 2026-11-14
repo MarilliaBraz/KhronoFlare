@@ -109,10 +109,10 @@ def test_iqr_keeps_everything_when_there_are_no_outliers():
 
 
 def test_iqr_limits_are_computed_per_vza_bin():
-    # 20 pares ≈ 1 no nadir e 5 pares ≈ 0,01 na borda: juntos, os da borda seriam anômalos
-    p = _pairs([*_spread(20), *_spread(5, center=0.01)], vza=[5.0] * 20 + [65.0] * 5)
+    # 100 pares ≈ 1 no nadir e 30 pares ≈ 0,01 na borda: juntos, os da borda seriam anômalos
+    p = _pairs([*_spread(100), *_spread(30, center=0.01)], vza=[5.0] * 100 + [65.0] * 30)
     assert not outlier_mask(p).any()
-    assert outlier_mask(p, bin_width=None)[20:].all()   # sem faixas: os 5 caem fora
+    assert outlier_mask(p, bin_width=None)[100:].all()   # sem faixas: os 30 caem fora
 
 
 def test_iqr_flags_pairs_without_vza_or_with_nonpositive_frp():
@@ -151,3 +151,11 @@ def test_bin_without_reference_rows_uses_global_reference_limits():
 def test_empty_reference_fails_loudly():
     with pytest.raises(ValueError, match="referência"):
         outlier_mask(_pairs(_spread(10), vza=5.0), reference=np.zeros(10, bool))
+
+
+
+def test_bin_with_too_few_reference_pairs_uses_global_limits():
+    # 100 pares ≈ 1 no nadir; só 10 pares ≈ 0,01 na borda: poucos para limites próprios
+    p = _pairs([*_spread(100), *_spread(10, center=0.01)], vza=[5.0] * 100 + [65.0] * 10)
+    assert outlier_mask(p)[100:].all()                       # mínimo padrão (30) → limites globais
+    assert not outlier_mask(p, min_per_bin=5)[100:].any()    # com mínimo 5 a faixa tem limites próprios

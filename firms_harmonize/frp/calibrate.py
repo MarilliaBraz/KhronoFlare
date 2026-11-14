@@ -23,6 +23,7 @@ from .prepare import in_window
 
 MIN_POINTS = 3  # três coeficientes
 VZA_BIN_DEG = 10.0
+MIN_PER_BIN = 30  # faixa com menos pares usa o fator de Duan global (média instável)
 
 
 def _bin_index(vza: np.ndarray, width: float, n_bins: int) -> np.ndarray:
@@ -64,17 +65,19 @@ class Calibration:
         return cls(**{**d, "smearing_by_bin": tuple(d.get("smearing_by_bin", ()))})
 
 
-def _smearing_by_bin(resid: np.ndarray, vza: np.ndarray, width: float, overall: float) -> tuple[float, ...]:
+def _smearing_by_bin(resid: np.ndarray, vza: np.ndarray, width: float, overall: float,
+                     min_per_bin: int = MIN_PER_BIN) -> tuple[float, ...]:
     n_bins = int(np.floor(vza.max() / width)) + 1
     idx = _bin_index(vza, width, n_bins)
     factors = []
     for b in range(n_bins):
         sel = idx == b
-        factors.append(float(np.mean(np.exp(resid[sel]))) if sel.any() else overall)
+        factors.append(float(np.mean(np.exp(resid[sel]))) if sel.sum() >= min_per_bin else overall)
     return tuple(factors)
 
 
-def fit(frp_modis, vza, frp_viirs, night=None, bin_width: float | None = VZA_BIN_DEG) -> Calibration:
+def fit(frp_modis, vza, frp_viirs, night=None, bin_width: float | None = VZA_BIN_DEG,
+        min_per_bin: int = MIN_PER_BIN) -> Calibration:
     x, z, y = (np.asarray(v, dtype=float) for v in (frp_modis, vza, frp_viirs))
     if len(x) < MIN_POINTS:
         raise ValueError(f"poucos pares para calibrar ({len(x)} < {MIN_POINTS})")
@@ -89,7 +92,7 @@ def fit(frp_modis, vza, frp_viirs, night=None, bin_width: float | None = VZA_BIN
     coef, *_ = np.linalg.lstsq(design, np.log(y), rcond=None)
     resid = np.log(y) - design @ coef
     overall = float(np.mean(np.exp(resid)))
-    by_bin = _smearing_by_bin(resid, z, bin_width, overall) if bin_width else ()
+    by_bin = _smearing_by_bin(resid, z, bin_width, overall, min_per_bin) if bin_width else ()
     return Calibration(a=float(coef[0]), b=float(coef[1]), c=float(coef[2]), smearing=overall,
                        n=int(len(x)), bin_width=bin_width, smearing_by_bin=by_bin,
                        d=float(coef[3]) if with_night else 0.0)
