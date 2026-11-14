@@ -8,3 +8,4 @@ __pycache__/
 # Dados brutos do NASA FIRMS (grandes demais para o GitHub, limite de 100 MB por arquivo)
 DL_FIRE_*/
 *.zip
+.coverage
