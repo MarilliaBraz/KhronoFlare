@@ -10,6 +10,7 @@
     python -m firms_harmonize frp-prepare     # FRP: Aqua e S-NPP limpos (FRP ≤ 0, duplicatas) → data/processed/frp
     python -m firms_harmonize frp-match       # FRP: pares Aqua × S-NPP (pegada MODIS, Δt ≤ 5 min) → pairs.parquet
     python -m firms_harmonize frp-calibrate   # FRP: modelo ln V = a + b ln M + c VZA, validado fora da amostra
+    python -m firms_harmonize frp-fuse        # FRP: fusão diária no pixel MODIS → frp_fused.parquet, frp_anual.csv
 """
 from __future__ import annotations
 
@@ -194,11 +195,27 @@ def cmd_frp_calibrate(args):
     print("\nModelo final (2012-02 a 2021-12):", final.to_dict())
 
 
+def cmd_frp_fuse(args):
+    from .frp.calibrate import Calibration
+    from .frp.fuse import annual_totals, fuse
+    cal = Calibration.from_dict(json.loads((FRP_DIR / "frp_calibration.json").read_text())["modelo_final"])
+    fused = fuse(pd.read_parquet(FRP_DIR / "aqua.parquet"), pd.read_parquet(FRP_DIR / "pairs.parquet"), cal)
+    fused.to_parquet(FRP_DIR / "frp_fused.parquet", index=False)
+    totals = annual_totals(fused)
+    totals.to_csv(FRP_DIR / "frp_anual.csv", index=False)
+    print(f"Focos Aqua fundidos: {len(fused):,} | fonte: {fused['fonte'].value_counts().to_dict()}")
+    show = totals.assign(frp_modis_total_GW=totals["frp_modis_total"] / 1e3,
+                         frp_harm_total_GW=totals["frp_harm_total"] / 1e3,
+                         razao=totals["frp_harm_total"] / totals["frp_modis_total"])
+    print(show[["ano", "focos", "frp_modis_total_GW", "frp_harm_total_GW", "razao",
+                "frp_harm_mediana", "frac_viirs"]].round(3).to_string(index=False))
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="firms_harmonize")
     sub = p.add_subparsers(dest="cmd", required=True)
     for name in ["status", "boundary", "fetch-recent", "aggregate", "harmonize", "validate", "all",
-                 "frp-prepare", "frp-match", "frp-calibrate"]:
+                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse"]:
         sp = sub.add_parser(name)
         sp.add_argument("--res", type=float, default=0.25, help="lado da célula em graus")
         sp.add_argument("--min-conf", default="nominal", choices=["low", "nominal", "high"])
@@ -217,7 +234,7 @@ def main(argv=None):
     run = {"status": cmd_status, "boundary": cmd_boundary, "fetch-recent": cmd_fetch_recent,
            "aggregate": cmd_aggregate, "harmonize": cmd_harmonize, "validate": cmd_validate,
            "frp-prepare": cmd_frp_prepare, "frp-match": cmd_frp_match,
-           "frp-calibrate": cmd_frp_calibrate}
+           "frp-calibrate": cmd_frp_calibrate, "frp-fuse": cmd_frp_fuse}
     if a.cmd == "all":
         for f in (cmd_aggregate, cmd_harmonize, cmd_validate):
             f(a)
