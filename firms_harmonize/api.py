@@ -25,17 +25,18 @@ SOURCE_TO_PLATFORM = {
 
 class FirmsClient:
     def __init__(self, key: str | None = None, session: requests.Session | None = None,
-                 safety_margin: int = 300):
+                 safety_margin: int = 300, timeout: int = 180):
         self.key = key or map_key()
+        self.timeout = timeout
         self.s = session or requests.Session()
         self.safety_margin = safety_margin
 
     def _redact(self, text: str) -> str:
         return text.replace(self.key, "***")
 
-    def _get(self, url: str, timeout: int = 180) -> str:
+    def _get(self, url: str, timeout: int | None = None) -> str:
         try:
-            r = self.s.get(url, timeout=timeout)
+            r = self.s.get(url, timeout=timeout or self.timeout)
         except requests.RequestException as e:
             # A URL leva a chave; a mensagem original do requests a exporia no traceback.
             raise RuntimeError(f"FIRMS: falha de rede: {self._redact(str(e))}") from None

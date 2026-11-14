@@ -39,6 +39,14 @@ CALIBRATION = {
 
 REFERENCE = "SNPP"  # a série harmonizada fica em "unidades S-NPP VIIRS 375 m"
 
+# Harmonização de FRP por pareamento de pixels: arquivos de cada plataforma e período lido.
+# O Aqua é lido inteiro (vai para a série final); o S-NPP só na janela de calibração Aqua→SNPP.
+FRP_DIR = PROCESSED / "frp"
+FRP_SOURCES = {
+    "Aqua": ("fire_*_M-C61_*.csv", PLATFORM_PERIODS["Aqua"][0], None),
+    "SNPP": ("fire_*_SV-C2_*.csv", *CALIBRATION[("Aqua", "SNPP")]),
+}
+
 
 def map_key() -> str:
     """Lê FIRMS_MAP_KEY do ambiente ou do arquivo .env da raiz (sem dependências externas)."""

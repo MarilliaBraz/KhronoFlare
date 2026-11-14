@@ -4,7 +4,7 @@ Esquema padronizado:
     lat, lon, date (datetime64), hhmm (str 'HHMM' UTC), sensor ('MODIS'|'VIIRS'),
     platform ('Terra'|'Aqua'|'SNPP'|'NOAA20'|'NOAA21'), conf ('low'|'nominal'|'high'),
     frp (MW), daynight ('D'|'N'), type (Int, <NA> quando o produto não informa),
-    processing ('SP'|'NRT')
+    processing ('SP'|'NRT'), scan e track (tamanho do pixel em km, ao longo e através da varredura)
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 COLUMNS = ["lat", "lon", "date", "hhmm", "sensor", "platform", "conf",
-           "frp", "daynight", "type", "processing"]
+           "frp", "daynight", "type", "processing", "scan", "track"]
 
 _PLATFORM = {
     # MODIS
@@ -40,18 +40,20 @@ def modis_conf_class(values: pd.Series) -> pd.Series:
 def normalize(df: pd.DataFrame) -> pd.DataFrame:
     """Converte um DataFrame cru do FIRMS para o esquema padronizado."""
     cols = {c.lower(): c for c in df.columns}
-    if "bright_ti4" in cols:
-        sensor = "VIIRS"
-    elif "brightness" in cols:
-        sensor = "MODIS"
-    else:
+    if not ({"bright_ti4", "brightness"} & cols.keys()) or "satellite" not in cols:
         raise ValueError(f"Colunas não reconhecidas como MODIS nem VIIRS: {list(df.columns)}")
     g = lambda name: df[cols[name]]  # noqa: E731
 
     platform = g("satellite").astype(str).str.strip().str.lower().map(_PLATFORM)
     if platform.isna().any():
         unknown = sorted(g("satellite").astype(str)[platform.isna()].unique())[:5]
-        raise ValueError(f"Satélite desconhecido em {sensor}: {unknown}")
+        raise ValueError(f"Satélite desconhecido: {unknown}")
+    # O sensor vem do satélite, não do nome da coluna de brilho: o Archive Download
+    # atual do VIIRS usa "brightness", que antes indicava MODIS.
+    is_modis = platform.isin(["Terra", "Aqua"])
+    if is_modis.any() and not is_modis.all():
+        raise ValueError("Arquivo mistura satélites MODIS e VIIRS")
+    sensor = "MODIS" if is_modis.all() else "VIIRS"
 
     if sensor == "MODIS":
         conf = modis_conf_class(g("confidence"))
@@ -77,6 +79,8 @@ def normalize(df: pd.DataFrame) -> pd.DataFrame:
         "daynight": g("daynight").astype(str).str.strip().str.upper() if "daynight" in cols else pd.NA,
         "type": typ.values,
         "processing": processing,
+        "scan": pd.to_numeric(g("scan"), errors="coerce") if "scan" in cols else np.nan,
+        "track": pd.to_numeric(g("track"), errors="coerce") if "track" in cols else np.nan,
     })
     return out.dropna(subset=["lat", "lon", "date"])[COLUMNS]
 
