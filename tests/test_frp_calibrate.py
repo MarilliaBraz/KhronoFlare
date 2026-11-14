@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from firms_harmonize.frp.calibrate import Calibration, evaluate, fit, validate
+from firms_harmonize.frp.match import outlier_mask
 
 A, B, C = -0.2, 0.9, -0.003
 
@@ -65,17 +66,28 @@ def test_evaluate_reports_sum_bias_in_percent():
     assert m["erro_mediano_pct"] == pytest.approx(10.0)
 
 
-def test_validate_trains_only_on_train_window_and_ignores_outliers():
+def test_validate_recomputes_outliers_with_train_only_limits():
     p = _synthetic(sigma=0.3)
-    p.loc[p.index[:50], "outlier"] = True
-    rep = validate(p, train=("2012-02", "2018-12"), test=("2019-01", "2021-12"))
+    p.loc[p.index[:50], "outlier"] = True             # coluna gravada é ignorada na validação
     ym = p["date"].dt.to_period("M")
-    in_train = ym.between(pd.Period("2012-02"), pd.Period("2018-12")) & ~p["outlier"]
-    in_test = ym.between(pd.Period("2019-01"), pd.Period("2021-12")) & ~p["outlier"]
-    assert rep["treino"]["pares"] == int(in_train.sum())
-    assert rep["teste"]["pares"] == int(in_test.sum())
+    in_train = ym.between(pd.Period("2012-02"), pd.Period("2018-12")).to_numpy()
+    in_test = ym.between(pd.Period("2019-01"), pd.Period("2021-12")).to_numpy()
+    out = outlier_mask(p, reference=in_train)
+    rep = validate(p, train=("2012-02", "2018-12"), test=("2019-01", "2021-12"))
+    assert rep["treino"]["pares"] == int((in_train & ~out).sum())
+    assert rep["teste"]["pares"] == int((in_test & ~out).sum())
+    assert rep["teste_com_anomalos"]["pares"] == int(in_test.sum())
     assert set(rep["teste"]["modelos"]) == {"sem_correcao", "fator_unico", "modelo_vza"}
+    assert set(rep["teste_com_anomalos"]["modelos"]) == {"sem_correcao", "fator_unico", "modelo_vza"}
     assert set(rep["teste"]["vies_soma_anual_pct"]) == {"2019", "2020", "2021"}
+
+
+def test_validate_flags_test_outliers_using_train_limits():
+    p = _synthetic(n=8000, sigma=0.3)
+    test_idx = p.index[p["date"] >= "2019-01-01"][:40]
+    p.loc[test_idx, "frp_viirs"] = p.loc[test_idx, "frp_modis"] * 1e-4   # anômalos só no teste
+    rep = validate(p, train=("2012-02", "2018-12"), test=("2019-01", "2021-12"))
+    assert rep["teste_com_anomalos"]["pares"] - rep["teste"]["pares"] >= 40
 
 
 def test_validate_vza_model_beats_baselines_out_of_sample():

@@ -179,6 +179,8 @@ def cmd_frp_calibrate(args):
     print("Treino", FRP_TRAIN, "pares:", rep["treino"]["pares"], "| modelo:", rep["treino"]["modelo"])
     print("Teste", FRP_TEST, "pares:", rep["teste"]["pares"])
     print(pd.DataFrame(rep["teste"]["modelos"]).T.round(3).to_string())
+    print(f"\nTeste incluindo os anômalos ({rep['teste_com_anomalos']['pares']} pares):")
+    print(pd.DataFrame(rep["teste_com_anomalos"]["modelos"]).T.round(3).to_string())
     print("\nViés da soma anual no teste (%):")
     print(pd.DataFrame(rep["teste"]["vies_soma_anual_pct"]).T.to_string())
     print("\nViés da soma dia (D) e noite (N) no teste (%):")

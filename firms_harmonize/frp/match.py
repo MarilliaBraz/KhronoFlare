@@ -100,12 +100,22 @@ IQR_K = 1.5
 VZA_BIN_DEG = 10
 
 
-def outlier_mask(pairs: pd.DataFrame, bin_width: float | None = VZA_BIN_DEG, k: float = IQR_K) -> np.ndarray:
+def _iqr_limits(values: np.ndarray, k: float) -> tuple[float, float]:
+    q1, q3 = np.percentile(values, [25, 75])
+    return q1 - k * (q3 - q1), q3 + k * (q3 - q1)
+
+
+def outlier_mask(pairs: pd.DataFrame, bin_width: float | None = VZA_BIN_DEG, k: float = IQR_K,
+                 reference=None) -> np.ndarray:
     """True nos pares anômalos: ln(ΣFRP_V / FRP_M) fora de [Q1 − k·IQR, Q3 + k·IQR].
 
     Os limites são calculados por faixa de VZA (padrão 10°), porque a razão muda com o ângulo e
     é justamente esse efeito que a calibração precisa enxergar. Pares sem VZA ou com FRP ≤ 0
     também saem (não dá para calcular a razão ou a faixa).
+
+    `reference` (máscara booleana) escolhe os pares usados para calcular os limites, que depois
+    valem para todos. Na validação fora da amostra, a referência é só o treino: assim os anos de
+    teste não influenciam o próprio filtro. Faixa sem pares de referência usa os limites globais.
     """
     frp_m, frp_v = pairs["frp_modis"].to_numpy(float), pairs["frp_viirs"].to_numpy(float)
     vza = pairs["vza"].to_numpy(float)
@@ -113,10 +123,13 @@ def outlier_mask(pairs: pd.DataFrame, bin_width: float | None = VZA_BIN_DEG, k: 
     log_ratio = np.full(len(pairs), np.nan)
     log_ratio[valid] = np.log(frp_v[valid] / frp_m[valid])
     group = np.zeros(len(pairs), dtype=int) if bin_width is None else np.floor(np.nan_to_num(vza) / bin_width)
+    ref = valid if reference is None else valid & np.asarray(reference, dtype=bool)
+    if not ref.any():
+        raise ValueError("nenhum par válido na referência para calcular os limites do IQR")
+    global_limits = _iqr_limits(log_ratio[ref], k)
     out = ~valid
     for g in np.unique(group[valid]):
-        sel = valid & (group == g)
-        q1, q3 = np.percentile(log_ratio[sel], [25, 75])
-        low, high = q1 - k * (q3 - q1), q3 + k * (q3 - q1)
+        sel, rsel = valid & (group == g), ref & (group == g)
+        low, high = _iqr_limits(log_ratio[rsel], k) if rsel.any() else global_limits
         out[sel] = (log_ratio[sel] < low) | (log_ratio[sel] > high)
     return out

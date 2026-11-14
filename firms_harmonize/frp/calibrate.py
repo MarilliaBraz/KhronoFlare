@@ -18,6 +18,7 @@ from dataclasses import asdict, dataclass
 import numpy as np
 import pandas as pd
 
+from .match import outlier_mask
 from .prepare import in_window
 
 MIN_POINTS = 3  # três coeficientes
@@ -123,18 +124,28 @@ def _group_bias(groups: np.ndarray, obs: np.ndarray, preds: dict) -> dict:
 
 
 def validate(pairs: pd.DataFrame, train: tuple[str, str], test: tuple[str, str]) -> dict:
-    """Ajusta na janela de treino e mede nos anos de teste (pares anômalos ficam de fora)."""
-    clean = pairs[~pairs["outlier"].astype(bool)]
-    tr = clean[in_window(clean["date"], *train)]
-    te = clean[in_window(clean["date"], *test)]
+    """Ajusta na janela de treino e mede nos anos de teste.
+
+    Os anômalos são recalculados aqui com limites do IQR só do treino (a coluna `outlier` gravada
+    usa todos os anos e serve ao modelo final). `teste_com_anomalos` mede também nos pares que o
+    filtro tirou, para mostrar que o resultado não depende de descartá-los.
+    """
+    in_train = in_window(pairs["date"], *train).to_numpy()
+    in_test = in_window(pairs["date"], *test).to_numpy()
+    out = outlier_mask(pairs, reference=in_train)
+    tr, te, te_all = pairs[in_train & ~out], pairs[in_test & ~out], pairs[in_test]
     cal = fit(tr["frp_modis"], tr["vza"], tr["frp_viirs"], night=is_night(tr))
     k = float(tr["frp_viirs"].sum() / tr["frp_modis"].sum())
     preds = _predictions(te, cal, k)
     obs = te["frp_viirs"].to_numpy(float)
+    preds_all = _predictions(te_all, cal, k)
+    obs_all = te_all["frp_viirs"].to_numpy(float)
     return {
         "treino": {"janela": list(train), "pares": int(len(tr)), "modelo": cal.to_dict(), "fator_unico": k},
         "teste": {"janela": list(test), "pares": int(len(te)),
                   "modelos": {name: evaluate(p, obs) for name, p in preds.items()},
                   "vies_soma_anual_pct": _group_bias(te["date"].dt.year.to_numpy(), obs, preds),
                   "vies_soma_dia_noite_pct": _group_bias(te["daynight"].astype(str).to_numpy(), obs, preds)},
+        "teste_com_anomalos": {"pares": int(len(te_all)),
+                               "modelos": {name: evaluate(p, obs_all) for name, p in preds_all.items()}},
     }

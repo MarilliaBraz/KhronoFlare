@@ -131,3 +131,23 @@ def test_one_modis_pixel_without_scan_does_not_block_the_others():
 def test_group_where_every_modis_pixel_lacks_scan_yields_no_pairs():
     m = _modis([(D, 1000, 0, 0, np.nan, 1.0, 20.0)])
     assert match_pairs(m, _viirs([(D, 1000, 0, 0, 7.0)])).empty
+
+
+def test_iqr_limits_can_come_from_reference_rows_only():
+    # 20 pares de referência ≈ 1 e 20 pares fora da referência ≈ 0,01 na mesma faixa
+    p = _pairs([*_spread(20), *_spread(20, center=0.01)], vza=5.0)
+    ref = np.r_[np.ones(20, bool), np.zeros(20, bool)]
+    assert not outlier_mask(p).any()                         # com todos, o IQR é largo
+    assert outlier_mask(p, reference=ref)[20:].all()          # só com a referência, os outros saem
+    assert not outlier_mask(p, reference=ref)[:20].any()
+
+
+def test_bin_without_reference_rows_uses_global_reference_limits():
+    p = _pairs([*_spread(20), 0.001, 1.0], vza=[5.0] * 20 + [65.0, 65.0])
+    ref = np.r_[np.ones(20, bool), False, False]
+    assert list(outlier_mask(p, reference=ref)[20:]) == [True, False]
+
+
+def test_empty_reference_fails_loudly():
+    with pytest.raises(ValueError, match="referência"):
+        outlier_mask(_pairs(_spread(10), vza=5.0), reference=np.zeros(10, bool))
