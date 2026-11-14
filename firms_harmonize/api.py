@@ -34,7 +34,11 @@ class FirmsClient:
         return text.replace(self.key, "***")
 
     def _get(self, url: str, timeout: int = 180) -> str:
-        r = self.s.get(url, timeout=timeout)
+        try:
+            r = self.s.get(url, timeout=timeout)
+        except requests.RequestException as e:
+            # A URL leva a chave; a mensagem original do requests a exporia no traceback.
+            raise RuntimeError(f"FIRMS: falha de rede: {self._redact(str(e))}") from None
         if r.status_code != 200:
             raise RuntimeError(f"FIRMS HTTP {r.status_code}: {self._redact(r.text[:300])}")
         if r.text.lstrip().lower().startswith(("invalid", "error")):
