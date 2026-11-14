@@ -69,3 +69,9 @@ def test_resumo_combines_the_three_tests_and_names_the_break_year():
     assert r["mann_kendall"]["tau"] < 0 and r["sen"]["inclinacao"] < 0
     assert r["sen"]["inclinacao_pct_ano"] == pytest.approx(100 * r["sen"]["inclinacao"] / y.mean())
     assert r["n_anos"] == 20 and r["periodo"] == [2003, 2022]
+
+
+@pytest.mark.parametrize("anos", [[2003, 2004, 2006, 2007], [2004, 2003, 2005, 2006], [2003.5, 2004.5, 2005.5, 2006.5]])
+def test_resumo_requires_consecutive_integer_years_in_order(anos):
+    with pytest.raises(ValueError, match="consecutivos"):
+        resumo(anos, [1.0, 2.0, 3.0, 4.0])

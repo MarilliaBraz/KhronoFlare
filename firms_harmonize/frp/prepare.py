@@ -25,6 +25,12 @@ def in_window(dates: pd.Series, start: str, end: str | None) -> pd.Series:
     return keep
 
 
+def _valid_pixel_size(df: pd.DataFrame) -> pd.DataFrame:
+    """scan e track finitos e positivos: sem eles não há VZA nem pegada."""
+    s, t = df["scan"].to_numpy(float), df["track"].to_numpy(float)
+    return df[np.isfinite(s) & np.isfinite(t) & (s > 0) & (t > 0)]
+
+
 def _filter_chunk(df, platform, start, end, boundary, rep):
     df = df[df["platform"] == platform]
     rep["lidos"] += len(df)
@@ -34,6 +40,7 @@ def _filter_chunk(df, platform, start, end, boundary, rep):
         ("tipo_nao_vegetacao", lambda d: apply_filters(d, min_conf="low", vegetation_only=True)),
         ("fora_do_brasil", lambda d: geo.clip(d, boundary)),
         ("frp_nao_positivo", drop_nonpositive_frp),
+        ("pixel_invalido", _valid_pixel_size),
     ]
     for name, step in steps:
         before = len(df)
@@ -53,7 +60,7 @@ def _drop_nrt_overlap(df: pd.DataFrame) -> pd.DataFrame:
 def prepare_platform(paths: Iterable[Path], platform: str, start: str, end: str | None,
                      boundary=None) -> tuple[pd.DataFrame, dict]:
     rep = dict.fromkeys(["lidos", "fora_da_janela", "tipo_nao_vegetacao", "fora_do_brasil",
-                         "frp_nao_positivo", "nrt_sobreposto_ao_sp", "duplicatas", "final"], 0)
+                         "frp_nao_positivo", "pixel_invalido", "nrt_sobreposto_ao_sp", "duplicatas", "final"], 0)
     parts = [_filter_chunk(c, platform, start, end, boundary, rep) for p in paths for c in iter_csv(p)]
     parts = [p for p in parts if len(p)]
     if not parts:

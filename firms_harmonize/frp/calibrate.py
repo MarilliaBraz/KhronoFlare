@@ -77,7 +77,7 @@ def fit(frp_modis, vza, frp_viirs, night=None, bin_width: float | None = VZA_BIN
     x, z, y = (np.asarray(v, dtype=float) for v in (frp_modis, vza, frp_viirs))
     if len(x) < MIN_POINTS:
         raise ValueError(f"poucos pares para calibrar ({len(x)} < {MIN_POINTS})")
-    if (x <= 0).any() or (y <= 0).any() or not np.isfinite(z).all():
+    if not (np.isfinite(x) & (x > 0)).all() or not (np.isfinite(y) & (y > 0)).all() or not np.isfinite(z).all():
         raise ValueError("FRP precisa ser positivo e a VZA, finita, em todos os pares")
     columns = [np.ones_like(x), np.log(x), z]
     nt = np.zeros_like(x) if night is None else np.asarray(night, dtype=float)

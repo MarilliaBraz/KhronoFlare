@@ -119,3 +119,15 @@ def test_iqr_flags_pairs_without_vza_or_with_nonpositive_frp():
     p = _pairs([*_spread(20), 1.0, 1.0], vza=[10.0] * 21 + [np.nan])
     p.iloc[20, p.columns.get_loc("frp_viirs")] = 0.0
     assert list(np.flatnonzero(outlier_mask(p))) == [20, 21]
+
+# ---------- robustez ----------
+
+def test_one_modis_pixel_without_scan_does_not_block_the_others():
+    m = _modis([(D, 1000, 0, 0, 1.0, 1.0, 20.0), (D, 1000, 1, 1, np.nan, 1.0, 30.0)])
+    p = match_pairs(m, _viirs([(D, 1000, 0, _east(0.2), 7.0), (D, 1000, 1, 1, 5.0)]))
+    assert len(p) == 1 and p.iloc[0]["frp_modis"] == 20.0
+
+
+def test_group_where_every_modis_pixel_lacks_scan_yields_no_pairs():
+    m = _modis([(D, 1000, 0, 0, np.nan, 1.0, 20.0)])
+    assert match_pairs(m, _viirs([(D, 1000, 0, 0, 7.0)])).empty

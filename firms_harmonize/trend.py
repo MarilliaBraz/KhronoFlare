@@ -55,7 +55,11 @@ def pettitt(valores) -> dict:
 
 def resumo(anos, valores) -> dict:
     """Os três testes juntos, com a inclinação em % da média por ano e o ano da quebra de Pettitt."""
-    t, y = np.asarray(anos, dtype=int), _serie(valores)
+    t_raw, y = np.asarray(anos, dtype=float), _serie(valores)
+    # MK e Pettitt usam a posição na série: um ano faltando ou fora de ordem daria resultado errado.
+    if t_raw.shape != y.shape or not np.all(t_raw == np.round(t_raw)) or not np.all(np.diff(t_raw) == 1):
+        raise ValueError("anos precisam ser inteiros consecutivos, em ordem crescente")
+    t = t_raw.astype(int)
     sen = sen_slope(t, y)
     pt = pettitt(y)
     corte = pt["indice_quebra"] + 1

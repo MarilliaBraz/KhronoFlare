@@ -31,7 +31,9 @@ def minute_of_day(hhmm: pd.Series) -> np.ndarray:
 def _candidate_pairs(lat, lon, scan, track) -> np.ndarray:
     """Pares cujos centros estão perto o bastante para as pegadas se tocarem."""
     xy = np.column_stack([lon * KM_PER_DEG_LON_EQUATOR * np.cos(np.radians(lat)), lat * KM_PER_DEG_LAT])
-    radius = float(np.hypot(scan.max(), track.max()))
+    if np.isnan(scan).all() or np.isnan(track).all():
+        return np.empty((0, 2), dtype=int)
+    radius = float(np.hypot(np.nanmax(scan), np.nanmax(track)))  # NaN num pixel não zera o raio do dia
     return cKDTree(xy).query_pairs(radius, output_type="ndarray")
 
 

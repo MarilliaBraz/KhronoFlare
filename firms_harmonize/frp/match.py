@@ -31,7 +31,9 @@ def _assign(m: pd.DataFrame, v: pd.DataFrame, max_dt_min: int) -> np.ndarray:
     """Para cada VIIRS, a posição do pixel MODIS que o contém (ou -1)."""
     mlat, mlon = m["lat"].to_numpy(float), m["lon"].to_numpy(float)
     half_s, half_t = m["scan"].to_numpy(float) / 2, m["track"].to_numpy(float) / 2
-    radius = float(np.hypot(half_s.max(), half_t.max())) + 1e-6
+    if np.isnan(half_s).all() or np.isnan(half_t).all():
+        return np.full(len(v), -1)
+    radius = float(np.hypot(np.nanmax(half_s), np.nanmax(half_t))) + 1e-6  # NaN não zera o grupo
     k = min(N_CANDIDATES, len(m))
     _, idx = cKDTree(_xy(mlat, mlon)).query(_xy(v["lat"].to_numpy(float), v["lon"].to_numpy(float)),
                                             k=k, distance_upper_bound=radius)

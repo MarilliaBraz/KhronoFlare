@@ -109,3 +109,26 @@ def test_prepare_platform_ignores_other_platforms_and_respects_end(tmp_path):
     ], "Terra")
     df, rep = prepare_platform([arch], "Aqua", start="2012-02", end="2012-02")
     assert df.empty and rep["final"] == 0
+
+# ---------- robustez: pixel sem tamanho ----------
+
+def test_one_missing_scan_does_not_disable_deduplication_of_the_day():
+    df = _fires([("Aqua", "2015-08-01", "1330", 0, 0, 1.0, 1.0, 10.0),
+                 ("Aqua", "2015-08-01", "1330", 0, 0, 1.0, 1.0, 10.0),
+                 ("Aqua", "2015-08-01", "1330", 5, 5, np.nan, 1.0, 10.0)])
+    assert list(duplicate_mask(df)) == [False, True, False]
+
+
+def test_prepare_drops_and_counts_pixels_without_valid_size(tmp_path):
+    arch = _csv(tmp_path / "fire_archive_M-C61_1.csv", [
+        (-10, -50, 1.0, 1.0, "2012-02-01", 1330, 9.0, 0, "6.1"),
+        (-11, -51, None, 1.0, "2012-02-02", 1330, 9.0, 0, "6.1"),   # scan vazio
+        (-12, -52, 1.0, 0.0, "2012-02-03", 1330, 9.0, 0, "6.1"),    # track zero
+    ], "Aqua")
+    df, rep = prepare_platform([arch], "Aqua", start="2012-02", end=None)
+    assert len(df) == 1 and rep["pixel_invalido"] == 2 and rep["final"] == 1
+
+
+def test_day_where_every_pixel_lacks_scan_has_no_duplicates():
+    df = _fires([("Aqua", "2015-08-01", "1330", 0, 0, np.nan, 1.0, 10.0)] * 2)
+    assert not duplicate_mask(df).any()

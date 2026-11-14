@@ -173,3 +173,10 @@ def test_validate_reports_day_and_night_bias_and_fixes_night_bias():
     assert set(dn) == {"D", "N"}
     assert abs(dn["N"]["modelo_vza"]) < 3.0 and abs(dn["D"]["modelo_vza"]) < 3.0
     assert rep["treino"]["modelo"]["d"] == pytest.approx(D_NIGHT, abs=0.02)
+
+
+def test_fit_rejects_missing_frp():
+    with pytest.raises(ValueError, match="positivo"):
+        fit(np.array([1.0, np.nan, 2.0, 3.0]), np.zeros(4), np.ones(4))
+    with pytest.raises(ValueError, match="positivo"):
+        fit(np.ones(4), np.zeros(4), np.array([1.0, 2.0, np.nan, 3.0]))
