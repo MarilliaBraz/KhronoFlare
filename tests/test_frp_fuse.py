@@ -63,3 +63,12 @@ def test_annual_totals():
     assert t.loc[2015, "frac_viirs"] == pytest.approx(1 / 3)
     assert t.loc[2005, "frp_harm_mediana"] == pytest.approx(5.0)
     assert np.isclose(t.loc[2005, "frac_viirs"], 0.0)
+
+
+def test_annual_totals_reports_median_daytime_overpass_minute():
+    # A deriva orbital do Aqua (2022+) aparece como passagem diurna cada vez mais tarde.
+    aqua = pd.concat([AQUA, _aqua([("2015-08-03", 1060, -13.0, -53.0, 5.0, 5.0)]).assign(daynight="N"),
+                      _aqua([("2015-08-04", 1030, -14.0, -54.0, 5.0, 5.0)])], ignore_index=True)
+    t = annual_totals(fuse(aqua, _pairs([]), CAL)).set_index("ano")
+    assert t.loc[2015, "passagem_dia_min_utc"] == 1000      # mediana de 1000, 1000, 1000, 1030; noite fora
+    assert t.loc[2005, "passagem_dia_min_utc"] == 1000
