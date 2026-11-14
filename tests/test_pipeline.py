@@ -43,6 +43,14 @@ def test_archive_style_columns_with_type_and_short_satellite_codes():
     assert list(n.type) == [0, 2]
 
 
+def test_keeps_pixel_size_scan_and_track_in_km():
+    v = next(iter_csv(FIX / "viirs_noaa20_nrt_sample.csv"))
+    m = next(iter_csv(FIX / "modis_nrt_sample.csv"))
+    for df, lo, hi in [(v, 0.3, 0.9), (m, 1.0, 4.9)]:   # VIIRS 375 m agregado; MODIS 1 km → borda
+        assert {"scan", "track"} <= set(df.columns)
+        assert df.scan.between(lo, hi).all() and df.track.between(lo, hi).all()
+
+
 def test_unknown_satellite_fails_loudly():
     raw = pd.read_csv(FIX / "viirs_noaa20_nrt_sample.csv").head(2).assign(satellite="XYZ")
     with pytest.raises(ValueError, match="desconhecido"):
