@@ -167,12 +167,12 @@ FRP_TRAIN, FRP_TEST = ("2012-02", "2018-12"), ("2019-01", "2021-12")
 
 
 def cmd_frp_calibrate(args):
-    from .frp.calibrate import Calibration, fit, validate
+    from .frp.calibrate import Calibration, fit, is_night, validate
     from .frp.prepare import in_window
     pairs = pd.read_parquet(FRP_DIR / "pairs.parquet")
     rep = validate(pairs, train=FRP_TRAIN, test=FRP_TEST)
     clean = pairs[~pairs["outlier"]]
-    final = fit(clean["frp_modis"], clean["vza"], clean["frp_viirs"])  # todos os anos, para a fusão
+    final = fit(clean["frp_modis"], clean["vza"], clean["frp_viirs"], night=is_night(clean))  # todos os anos
     out = {"validacao": rep, "modelo_final": final.to_dict()}
     (FRP_DIR / "frp_calibration.json").write_text(json.dumps(out, indent=2, ensure_ascii=False))
 
@@ -181,6 +181,8 @@ def cmd_frp_calibrate(args):
     print(pd.DataFrame(rep["teste"]["modelos"]).T.round(3).to_string())
     print("\nViés da soma anual no teste (%):")
     print(pd.DataFrame(rep["teste"]["vies_soma_anual_pct"]).T.to_string())
+    print("\nViés da soma dia (D) e noite (N) no teste (%):")
+    print(pd.DataFrame(rep["teste"]["vies_soma_dia_noite_pct"]).T.to_string())
 
     te = clean[in_window(clean["date"], *FRP_TEST)]
     cal, k = Calibration.from_dict(rep["treino"]["modelo"]), rep["treino"]["fator_unico"]
@@ -190,7 +192,7 @@ def cmd_frp_calibrate(args):
     print("\nViés da soma por faixa de VZA no teste (%):")
     print(pd.DataFrame({
         "fator_unico": 100 * (soma(k * te["frp_modis"]) / obs - 1),
-        "modelo_vza": 100 * (soma(pd.Series(cal.predict(te["frp_modis"], te["vza"]), index=te.index)) / obs - 1),
+        "modelo_vza": 100 * (soma(pd.Series(cal.predict(te["frp_modis"], te["vza"], is_night(te)), index=te.index)) / obs - 1),
     }).round(1).to_string())
     print("\nModelo final (2012-02 a 2021-12):", final.to_dict())
 

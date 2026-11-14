@@ -7,14 +7,15 @@ from firms_harmonize.frp.calibrate import Calibration, evaluate, fit, validate
 A, B, C = -0.2, 0.9, -0.003
 
 
-def _synthetic(n=4000, sigma=0.0, seed=0, start="2012-02-01", end="2021-12-31"):
+def _synthetic(n=4000, sigma=0.0, seed=0, start="2012-02-01", end="2021-12-31", night_effect=0.0):
     rng = np.random.default_rng(seed)
     frp_m = np.exp(rng.normal(3.0, 1.0, n))
     vza = rng.uniform(0, 65, n)
-    frp_v = np.exp(A + B * np.log(frp_m) + C * vza + rng.normal(0, sigma, n))
+    night = rng.random(n) < 0.2
+    frp_v = np.exp(A + B * np.log(frp_m) + C * vza + night_effect * night + rng.normal(0, sigma, n))
     dates = pd.to_datetime(rng.integers(pd.Timestamp(start).value, pd.Timestamp(end).value, n))
     return pd.DataFrame({"date": dates, "frp_modis": frp_m, "frp_viirs": frp_v, "vza": vza,
-                         "outlier": False})
+                         "daynight": np.where(night, "N", "D"), "outlier": False})
 
 
 def test_fit_recovers_known_coefficients_without_noise():
@@ -135,3 +136,40 @@ def test_validate_uses_smearing_by_bin():
     rep = validate(_heteroscedastic(), train=("2012-02", "2018-12"), test=("2019-01", "2021-12"))
     assert rep["treino"]["modelo"]["bin_width"] == 10
     assert len(rep["treino"]["modelo"]["smearing_by_bin"]) == 7
+
+
+# ---------- termo de noite (limites de detecção diferentes de dia e de noite) ----------
+
+D_NIGHT = -0.15
+
+
+def test_fit_recovers_night_coefficient_without_noise():
+    p = _synthetic(night_effect=D_NIGHT)
+    cal = fit(p["frp_modis"], p["vza"], p["frp_viirs"], night=p["daynight"].eq("N"))
+    assert (cal.a, cal.b, cal.c, cal.d) == pytest.approx((A, B, C, D_NIGHT), abs=1e-9)
+
+
+def test_predict_applies_night_term_and_defaults_to_day():
+    cal = Calibration(a=0.0, b=1.0, c=0.0, smearing=1.0, n=1, d=np.log(0.5))
+    assert cal.predict([10.0, 10.0], [0.0, 0.0], night=[False, True]) == pytest.approx([10.0, 5.0])
+    assert cal.predict([10.0], [0.0]) == pytest.approx([10.0])
+
+
+def test_fit_without_night_pairs_keeps_d_zero():
+    p = _synthetic()
+    cal = fit(p["frp_modis"], p["vza"], p["frp_viirs"], night=np.zeros(len(p), dtype=bool))
+    assert cal.d == 0.0 and (cal.a, cal.b, cal.c) == pytest.approx((A, B, C), abs=1e-9)
+
+
+def test_old_dict_without_night_term_loads_with_d_zero():
+    old = {"a": 0.1, "b": 0.9, "c": -0.001, "smearing": 1.3, "n": 5}
+    assert Calibration.from_dict(old).d == 0.0
+
+
+def test_validate_reports_day_and_night_bias_and_fixes_night_bias():
+    rep = validate(_synthetic(n=20_000, sigma=0.3, night_effect=D_NIGHT),
+                   train=("2012-02", "2018-12"), test=("2019-01", "2021-12"))
+    dn = rep["teste"]["vies_soma_dia_noite_pct"]
+    assert set(dn) == {"D", "N"}
+    assert abs(dn["N"]["modelo_vza"]) < 3.0 and abs(dn["D"]["modelo_vza"]) < 3.0
+    assert rep["treino"]["modelo"]["d"] == pytest.approx(D_NIGHT, abs=0.02)

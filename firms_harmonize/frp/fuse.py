@@ -29,7 +29,7 @@ def fuse(aqua: pd.DataFrame, pairs: pd.DataFrame, cal: Calibration) -> pd.DataFr
         raise ValueError("par duplicado: o mesmo pixel MODIS aparece em mais de um par")
     merged = aqua.reset_index(drop=True).merge(valid, on=KEY, how="left", validate="many_to_one")
     has_pair = merged["frp_viirs"].notna().to_numpy()
-    calibrated = cal.predict(merged["frp"], merged["vza"])
+    calibrated = cal.predict(merged["frp"], merged["vza"], merged["daynight"].astype(str).eq("N"))
     return pd.DataFrame({
         **{c: merged[c].to_numpy() for c in ["date", "minute", "daynight", "lat", "lon", "scan", "track", "vza"]},
         "frp_modis": merged["frp"].to_numpy(float),

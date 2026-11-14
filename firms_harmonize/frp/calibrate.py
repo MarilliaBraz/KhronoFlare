@@ -32,7 +32,9 @@ def _bin_index(vza: np.ndarray, width: float, n_bins: int) -> np.ndarray:
 @dataclass(frozen=True)
 class Calibration:
     """Coeficientes do modelo. Com `bin_width`, o fator de Duan é um por faixa de VZA (versão B):
-    o espalhamento dos resíduos muda com o ângulo, e um fator único erra as somas de cada faixa."""
+    o espalhamento dos resíduos muda com o ângulo, e um fator único erra as somas de cada faixa.
+    `d` é o termo de noite: os limites de detecção de FRP do MODIS e do VIIRS são diferentes de dia
+    e de noite (Sofiev & Kouznetsov 2026, GMD 19:10123); sem ele o FRP noturno saía +15 % alto."""
     a: float
     b: float
     c: float
@@ -40,16 +42,18 @@ class Calibration:
     n: int
     bin_width: float | None = None
     smearing_by_bin: tuple[float, ...] = ()
+    d: float = 0.0
 
     def _smearing_for(self, vza: np.ndarray) -> np.ndarray | float:
         if not self.bin_width or not self.smearing_by_bin:
             return self.smearing
         return np.asarray(self.smearing_by_bin)[_bin_index(vza, self.bin_width, len(self.smearing_by_bin))]
 
-    def predict(self, frp_modis, vza) -> np.ndarray:
-        """FRP MODIS (MW) → FRP equivalente S-NPP VIIRS (MW)."""
+    def predict(self, frp_modis, vza, night=None) -> np.ndarray:
+        """FRP MODIS (MW) → FRP equivalente S-NPP VIIRS (MW). `night` ausente = dia."""
         x, z = np.asarray(frp_modis, dtype=float), np.asarray(vza, dtype=float)
-        return self._smearing_for(z) * np.exp(self.a + self.b * np.log(x) + self.c * z)
+        nt = np.zeros_like(x) if night is None else np.asarray(night, dtype=float)
+        return self._smearing_for(z) * np.exp(self.a + self.b * np.log(x) + self.c * z + self.d * nt)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -69,19 +73,25 @@ def _smearing_by_bin(resid: np.ndarray, vza: np.ndarray, width: float, overall: 
     return tuple(factors)
 
 
-def fit(frp_modis, vza, frp_viirs, bin_width: float | None = VZA_BIN_DEG) -> Calibration:
+def fit(frp_modis, vza, frp_viirs, night=None, bin_width: float | None = VZA_BIN_DEG) -> Calibration:
     x, z, y = (np.asarray(v, dtype=float) for v in (frp_modis, vza, frp_viirs))
     if len(x) < MIN_POINTS:
         raise ValueError(f"poucos pares para calibrar ({len(x)} < {MIN_POINTS})")
     if (x <= 0).any() or (y <= 0).any() or not np.isfinite(z).all():
         raise ValueError("FRP precisa ser positivo e a VZA, finita, em todos os pares")
-    design = np.column_stack([np.ones_like(x), np.log(x), z])
+    columns = [np.ones_like(x), np.log(x), z]
+    nt = np.zeros_like(x) if night is None else np.asarray(night, dtype=float)
+    with_night = 0 < nt.sum() < len(nt)   # só estima d quando há pares de dia e de noite
+    if with_night:
+        columns.append(nt)
+    design = np.column_stack(columns)
     coef, *_ = np.linalg.lstsq(design, np.log(y), rcond=None)
     resid = np.log(y) - design @ coef
     overall = float(np.mean(np.exp(resid)))
     by_bin = _smearing_by_bin(resid, z, bin_width, overall) if bin_width else ()
     return Calibration(a=float(coef[0]), b=float(coef[1]), c=float(coef[2]), smearing=overall,
-                       n=int(len(x)), bin_width=bin_width, smearing_by_bin=by_bin)
+                       n=int(len(x)), bin_width=bin_width, smearing_by_bin=by_bin,
+                       d=float(coef[3]) if with_night else 0.0)
 
 
 def evaluate(pred, obs) -> dict:
@@ -95,17 +105,21 @@ def evaluate(pred, obs) -> dict:
     }
 
 
+def is_night(pairs: pd.DataFrame) -> np.ndarray:
+    return pairs["daynight"].astype(str).eq("N").to_numpy()
+
+
 def _predictions(test: pd.DataFrame, cal: Calibration, k: float) -> dict:
     m = test["frp_modis"].to_numpy(float)
-    return {"sem_correcao": m, "fator_unico": k * m, "modelo_vza": cal.predict(m, test["vza"])}
+    return {"sem_correcao": m, "fator_unico": k * m,
+            "modelo_vza": cal.predict(m, test["vza"], is_night(test))}
 
 
-def _annual_bias(test: pd.DataFrame, preds: dict) -> dict:
-    years = test["date"].dt.year.to_numpy()
-    obs = test["frp_viirs"].to_numpy(float)
-    return {str(y): {name: round(float(100 * (p[years == y].sum() / obs[years == y].sum() - 1)), 2)
+def _group_bias(groups: np.ndarray, obs: np.ndarray, preds: dict) -> dict:
+    """Viés da soma (%) de cada modelo dentro de cada grupo (ano, dia/noite...)."""
+    return {str(g): {name: round(float(100 * (p[groups == g].sum() / obs[groups == g].sum() - 1)), 2)
                      for name, p in preds.items()}
-            for y in np.unique(years)}
+            for g in np.unique(groups)}
 
 
 def validate(pairs: pd.DataFrame, train: tuple[str, str], test: tuple[str, str]) -> dict:
@@ -113,7 +127,7 @@ def validate(pairs: pd.DataFrame, train: tuple[str, str], test: tuple[str, str])
     clean = pairs[~pairs["outlier"].astype(bool)]
     tr = clean[in_window(clean["date"], *train)]
     te = clean[in_window(clean["date"], *test)]
-    cal = fit(tr["frp_modis"], tr["vza"], tr["frp_viirs"])
+    cal = fit(tr["frp_modis"], tr["vza"], tr["frp_viirs"], night=is_night(tr))
     k = float(tr["frp_viirs"].sum() / tr["frp_modis"].sum())
     preds = _predictions(te, cal, k)
     obs = te["frp_viirs"].to_numpy(float)
@@ -121,5 +135,6 @@ def validate(pairs: pd.DataFrame, train: tuple[str, str], test: tuple[str, str])
         "treino": {"janela": list(train), "pares": int(len(tr)), "modelo": cal.to_dict(), "fator_unico": k},
         "teste": {"janela": list(test), "pares": int(len(te)),
                   "modelos": {name: evaluate(p, obs) for name, p in preds.items()},
-                  "vies_soma_anual_pct": _annual_bias(te, preds)},
+                  "vies_soma_anual_pct": _group_bias(te["date"].dt.year.to_numpy(), obs, preds),
+                  "vies_soma_dia_noite_pct": _group_bias(te["daynight"].astype(str).to_numpy(), obs, preds)},
     }

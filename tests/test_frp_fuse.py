@@ -72,3 +72,10 @@ def test_annual_totals_reports_median_daytime_overpass_minute():
     t = annual_totals(fuse(aqua, _pairs([]), CAL)).set_index("ano")
     assert t.loc[2015, "passagem_dia_min_utc"] == 1000      # mediana de 1000, 1000, 1000, 1030; noite fora
     assert t.loc[2005, "passagem_dia_min_utc"] == 1000
+
+
+def test_calibrated_night_pixels_use_the_night_term():
+    cal = Calibration(a=0.0, b=1.0, c=0.0, smearing=1.0, n=1, d=np.log(0.5))
+    aqua = AQUA.assign(daynight=["D", "N", "D", "N"])
+    f = fuse(aqua, _pairs([]), cal)
+    assert f["frp_harm"].tolist() == pytest.approx([40.0, 15.0, 20.0, 5.0])
