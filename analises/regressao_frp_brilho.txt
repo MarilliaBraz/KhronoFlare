@@ -1,0 +1,2 @@
+FRP ~ brilho: inclinação=3.97705 (EP 1.49e-03), intercepto=-1251.499, r=0.648, R²=0.420, n=9862277
+log10(FRP) ~ brilho: inclinação=0.01732 (EP 4.61e-06), intercepto=-4.255, r=0.767, R²=0.589, n=9862277

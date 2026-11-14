@@ -1,0 +1,647 @@
+<title>Caderno de Regressão FIRMS</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: caderno de estudo em coluna única de leitura, com figuras que podem ocupar uma largura maior. */
+:root {
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --ink: #15181c;
+  --ink-2: #4a5160;
+  --ink-3: #6b7280;
+  --rule: #dde1e6;
+  --grid: #e8ebef;
+  --ember: #d4541f;      /* focos de calor (pontos) */
+  --ember-soft: #f7dccf;
+  --line: #2a68c4;       /* reta ajustada */
+  --line-soft: #dbe7f8;
+  --neg: #2a78d6;
+  --pos: #eb6834;
+  --ok: #1d7a46;
+  --warn: #9a6a00;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111317; --surface: #1a1d22; --ink: #eceef1; --ink-2: #b6bcc6; --ink-3: #8d95a1;
+    --rule: #2c3139; --grid: #252a31; --ember: #f07a45; --ember-soft: #3a2419;
+    --line: #6aa3f0; --line-soft: #1d2a3d; --neg: #3987e5; --pos: #d95926; --ok: #4cc283; --warn: #e0b13f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111317; --surface: #1a1d22; --ink: #eceef1; --ink-2: #b6bcc6; --ink-3: #8d95a1;
+  --rule: #2c3139; --grid: #252a31; --ember: #f07a45; --ember-soft: #3a2419;
+  --line: #6aa3f0; --line-soft: #1d2a3d; --neg: #3987e5; --pos: #d95926; --ok: #4cc283; --warn: #e0b13f;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg); color: var(--ink);
+  font: 16px/1.65 var(--font-body);
+}
+.pagina {
+  max-width: 1040px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 80px;
+  display: grid; gap: 56px;
+}
+.texto { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.15rem; font-weight: 700; }
+p { margin: 0; }
+.pilha { display: grid; gap: 16px; }
+.pilha-g { display: grid; gap: 24px; }
+.rotulo {
+  font: 600 0.74rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-3);
+}
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.num { font-size: 0.92em; }
+a { color: var(--line); }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--grid); padding: 1px 5px; border-radius: 4px; }
+
+/* Cabeçalho */
+.cabeca { display: grid; gap: 18px; border-bottom: 1px solid var(--rule); padding-bottom: 36px; }
+.cabeca .lead { font-size: 1.15rem; color: var(--ink-2); max-width: 64ch; }
+.ficha { display: flex; flex-wrap: wrap; gap: 8px 22px; font: 0.85rem/1.4 var(--font-mono); color: var(--ink-3); }
+
+/* Achados */
+.achados { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.achado { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 20px; display: grid; gap: 10px; align-content: start; }
+.achado .grande { font: 700 1.9rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.achado p { color: var(--ink-2); font-size: 0.95rem; }
+
+/* Seções */
+section { display: grid; gap: 22px; }
+.secao-cab { display: grid; gap: 8px; border-top: 2px solid var(--ink); padding-top: 14px; }
+
+/* Glossário */
+.conceitos { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0; border-top: 1px solid var(--rule); }
+.conceito { padding: 16px 18px 16px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 6px; min-width: 0; }
+.conceito dt { font: 700 1rem/1.3 var(--font-display); }
+.conceito dd { margin: 0; color: var(--ink-2); font-size: 0.95rem; }
+.formula {
+  font: 1.05rem/1.5 var(--font-mono); background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 8px; padding: 14px 18px; overflow-x: auto; white-space: nowrap;
+}
+
+/* Figuras */
+.figura { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.figura-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.grafico { position: relative; width: 100%; }
+.grafico svg { display: block; width: 100%; height: auto; overflow: visible; }
+.grafico text { fill: var(--ink-3); font: 11px var(--font-mono); }
+.grafico .eixo-titulo { fill: var(--ink-2); font: 600 11.5px var(--font-body); }
+.grafico .grade { stroke: var(--grid); stroke-width: 1; }
+.grafico .base { stroke: var(--ink-3); stroke-width: 1; }
+.legenda { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; color: var(--ink-2); }
+.legenda span { display: inline-flex; align-items: center; gap: 7px; }
+.marca-ponto { width: 10px; height: 10px; border-radius: 50%; background: var(--ember); }
+.marca-linha { width: 18px; height: 2px; background: var(--line); }
+.marca-pos { width: 10px; height: 10px; border-radius: 2px; background: var(--pos); }
+.marca-neg { width: 10px; height: 10px; border-radius: 2px; background: var(--neg); }
+.marca-cinza { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--ink-3); }
+.dica {
+  position: absolute; pointer-events: none; background: var(--ink); color: var(--bg);
+  font: 12px/1.45 var(--font-mono); padding: 7px 10px; border-radius: 6px; white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 12px)); z-index: 5;
+}
+.legenda-fig { font-size: 0.88rem; color: var(--ink-3); }
+
+/* Controles */
+.seletor { display: inline-flex; flex-wrap: wrap; gap: 4px; background: var(--grid); padding: 4px; border-radius: 8px; }
+.seletor button {
+  font: 600 0.84rem/1 var(--font-body); color: var(--ink-2); background: transparent; border: 0;
+  padding: 8px 12px; border-radius: 6px; cursor: pointer;
+}
+.seletor button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.12); }
+.seletor button:focus-visible, summary:focus-visible { outline: 2px solid var(--line); outline-offset: 2px; }
+
+/* Tabelas */
+.tabela-caixa { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 600 0.74rem/1.3 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+td.n, th.n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+details { border-top: 1px solid var(--rule); padding-top: 10px; }
+summary { cursor: pointer; font-weight: 600; color: var(--ink-2); font-size: 0.9rem; }
+details[open] summary { margin-bottom: 10px; }
+
+.selo { display: inline-block; font: 600 0.75rem/1 var(--font-mono); padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.selo.sim { color: var(--ok); }
+.selo.nao { color: var(--warn); }
+
+/* Leitura */
+.leitura { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; }
+.leitura > div { min-width: 0; }
+ol.passos, ul.lista { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; }
+ul.lista li::marker, ol.passos li::marker { color: var(--ink-3); }
+.nota { border-left: 3px solid var(--ember); padding: 4px 0 4px 16px; color: var(--ink-2); }
+.duas { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.duas > * { min-width: 0; }
+.perguntas li { padding-left: 4px; }
+.rodape { border-top: 1px solid var(--rule); padding-top: 22px; color: var(--ink-3); font-size: 0.88rem; display: grid; gap: 8px; }
+pre.cmd { font: 0.88rem/1.6 var(--font-mono); background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 18px; overflow-x: auto; margin: 0; }
+@media (prefers-reduced-motion: no-preference) { .seletor button { transition: background 0.15s; } }
+</style>
+
+<div class="pagina">
+
+<header class="cabeca">
+  <span class="rotulo">NASA Space Apps 2026 · Caderno de estudo</span>
+  <h1>Caderno de Regressão FIRMS</h1>
+  <p class="lead">Duas regressões lineares feitas com os focos de calor que baixamos da NASA FIRMS para o Brasil: quantos focos aparecem por ano, e quanto a temperatura de brilho de um foco explica a potência do fogo. Cada número desta página saiu dos arquivos brutos, e cada conceito vem explicado antes de ser usado.</p>
+  <div class="ficha">
+    <span>Fonte: NASA FIRMS, arquivo histórico</span>
+    <span>MODIS C6.1 <span data-v="frp.periodo"></span></span>
+    <span>VIIRS S-NPP 375 m, 2012–2026</span>
+    <span>Recorte: Brasil, focos de vegetação</span>
+  </div>
+</header>
+
+<section aria-labelledby="t-resumo">
+  <div class="secao-cab"><span class="rotulo">Resumo</span><h2 id="t-resumo">O que os dados mostram</h2></div>
+  <div class="achados">
+    <div class="achado">
+      <span class="rotulo">Tendência MODIS 2003–2025</span>
+      <span class="grande" data-v="modis_total.inclinacao_mil"></span>
+      <p>focos por ano, em média. A queda é estatisticamente significativa (p = <span class="num" data-v="modis_total.p"></span>), mas a reta explica só <span data-v="modis_total.r2pct"></span> da variação entre os anos.</p>
+    </div>
+    <div class="achado">
+      <span class="rotulo">Depois de 2008</span>
+      <span class="grande">sem tendência</span>
+      <p>Refeita a partir de 2008, a inclinação vira <span class="num" data-v="sens.2008"></span> focos/ano, com p = <span class="num" data-v="sens.2008p"></span>. A queda se concentra nos anos de 2003 a 2007.</p>
+    </div>
+    <div class="achado">
+      <span class="rotulo">Brilho explica FRP</span>
+      <span class="grande">R² = <span data-v="frp.log.r2"></span></span>
+      <p>na escala logarítmica. Cada 10 K a mais de brilho multiplicam a potência do fogo por <span class="num" data-v="frp.fator10"></span>, em média.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="t-conceitos">
+  <div class="secao-cab"><span class="rotulo">Parte 1 · Conceitos</span><h2 id="t-conceitos">Como uma regressão linear funciona</h2></div>
+  <div class="texto pilha">
+    <p>A regressão linear procura a reta que melhor resume como uma variável <em>y</em> muda quando outra variável <em>x</em> muda. "Melhor" tem um sentido preciso: é a reta que deixa a menor soma possível dos erros ao quadrado. Esse método se chama mínimos quadrados ordinários (MQO).</p>
+  </div>
+  <div class="formula">ŷ = a + b · x &nbsp;&nbsp;&nbsp; erro (resíduo) = y − ŷ &nbsp;&nbsp;&nbsp; MQO escolhe a e b que minimizam Σ (y − ŷ)²</div>
+  <dl class="conceitos">
+    <div class="conceito"><dt>Inclinação (b)</dt><dd>Quanto <em>y</em> muda, em média, quando <em>x</em> sobe uma unidade. Nos focos por ano, é quantos focos a mais ou a menos aparecem a cada ano.</dd></div>
+    <div class="conceito"><dt>Intercepto (a)</dt><dd>O valor da reta quando <em>x</em> = 0. Com anos no eixo x ele não tem leitura física (seria o ano zero), serve só para posicionar a reta.</dd></div>
+    <div class="conceito"><dt>R² (coeficiente de determinação)</dt><dd>A fração da variação de <em>y</em> que a reta explica, de 0 a 1. R² = 0,22 quer dizer que 22% da diferença entre os anos acompanha a reta e 78% vem de outras causas.</dd></div>
+    <div class="conceito"><dt>r (correlação de Pearson)</dt><dd>Força e sentido da relação linear, de −1 a +1. Numa regressão simples, R² é r ao quadrado.</dd></div>
+    <div class="conceito"><dt>Valor-p</dt><dd>A chance de ver uma inclinação tão grande quanto a observada se a inclinação verdadeira fosse zero. Abaixo de 0,05 costumamos chamar o resultado de significativo.</dd></div>
+    <div class="conceito"><dt>Intervalo de confiança de 95%</dt><dd>A faixa de inclinações compatíveis com os dados. Se ela não cruza o zero, a tendência é significativa a 5%.</dd></div>
+    <div class="conceito"><dt>Resíduo</dt><dd>A distância vertical entre cada ponto e a reta. Resíduos sem padrão indicam que a reta é um bom resumo. Resíduos com curva indicam que a relação não é linear.</dd></div>
+    <div class="conceito"><dt>Theil-Sen e Mann-Kendall</dt><dd>Duas checagens robustas. Theil-Sen usa a mediana das inclinações entre todos os pares de anos, então um ano extremo pesa pouco. Mann-Kendall testa se os valores tendem a subir ou descer, sem supor uma reta.</dd></div>
+  </dl>
+</section>
+
+<section aria-labelledby="t-dados">
+  <div class="secao-cab"><span class="rotulo">Parte 2 · Dados</span><h2 id="t-dados">De onde vêm os números</h2></div>
+  <div class="duas">
+    <div class="texto pilha">
+      <p>A FIRMS (Fire Information for Resource Management System) é o sistema da NASA que publica cada pixel onde um satélite detectou uma anomalia térmica. Cada linha dos arquivos é um <strong>foco</strong>: um pixel quente numa passagem do satélite, com data, hora, posição e medidas de temperatura e energia.</p>
+      <p>Usamos dois sensores. O <strong>MODIS</strong> voa nos satélites Terra (desde 2000) e Aqua (desde meados de 2002), com pixel de 1 km. O <strong>VIIRS</strong> do satélite S-NPP (desde 2012) tem pixel de 375 m e enxerga focos menores, por isso conta muito mais focos.</p>
+    </div>
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Coluna</th><th>O que é</th><th>Uso aqui</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">acq_date</td><td>Data da passagem (AAAA-MM-DD)</td><td>Ano do foco</td></tr>
+          <tr><td class="mono">brightness</td><td>Temperatura de brilho no infravermelho médio, em kelvin</td><td>x da regressão 2</td></tr>
+          <tr><td class="mono">frp</td><td>Potência radiativa do fogo, em megawatts</td><td>y da regressão 2</td></tr>
+          <tr><td class="mono">type</td><td>0 = vegetação; 1 = vulcão; 2 = fonte fixa; 3 = mar</td><td>Só type = 0</td></tr>
+          <tr><td class="mono">satellite</td><td>Terra, Aqua ou N (S-NPP)</td><td>Separar séries</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="nota texto">Excluímos 2000 a 2002 e 2026 da regressão anual. Em 2000 e 2001 só o Terra estava em órbita e em 2002 o Aqua entrou no meio do ano, então esses anos contam menos focos por falta de satélite, não por falta de fogo. O ano de 2026 ainda não terminou no arquivo histórico.</p>
+</section>
+
+<section aria-labelledby="t-anual">
+  <div class="secao-cab"><span class="rotulo">Parte 3 · Regressão 1</span><h2 id="t-anual">Número de focos por ano</h2></div>
+  <div class="texto"><p>Aqui <em>x</em> é o ano e <em>y</em> é o total de focos de vegetação detectados no Brasil naquele ano. A pergunta é se o número de focos está subindo ou caindo ao longo do tempo.</p></div>
+
+  <div class="figura">
+    <div class="figura-topo">
+      <h3 id="anual-titulo">Focos por ano</h3>
+      <div class="seletor" role="group" aria-label="Escolher série">
+        <button type="button" id="b-modis_total" data-serie="modis_total" aria-pressed="true">MODIS Terra + Aqua</button>
+        <button type="button" id="b-modis_aqua" data-serie="modis_aqua" aria-pressed="false">MODIS só Aqua</button>
+        <button type="button" id="b-viirs_snpp" data-serie="viirs_snpp" aria-pressed="false">VIIRS S-NPP</button>
+      </div>
+    </div>
+    <div class="legenda">
+      <span><i class="marca-ponto"></i>Focos no ano (usados na reta)</span>
+      <span><i class="marca-cinza"></i>Ano fora da regressão</span>
+      <span><i class="marca-linha"></i>Reta de mínimos quadrados</span>
+    </div>
+    <div class="grafico" id="g-anual"></div>
+    <p class="legenda-fig" id="anual-equacao"></p>
+  </div>
+
+  <div class="tabela-caixa">
+    <table>
+      <thead><tr><th>Série</th><th>Período</th><th class="n">Inclinação (focos/ano)</th><th class="n">IC 95%</th><th class="n">% da média/ano</th><th class="n">R²</th><th class="n">p</th><th class="n">Theil-Sen</th><th class="n">Mann-Kendall p</th><th>Tendência a 5%?</th></tr></thead>
+      <tbody id="tab-anual"></tbody>
+    </table>
+  </div>
+
+  <div class="figura">
+    <div class="figura-topo"><h3>Resíduos: quanto cada ano ficou acima ou abaixo da reta</h3></div>
+    <div class="legenda">
+      <span><i class="marca-pos"></i>Acima da reta (mais focos que a tendência)</span>
+      <span><i class="marca-neg"></i>Abaixo da reta</span>
+    </div>
+    <div class="grafico" id="g-residuos"></div>
+    <p class="legenda-fig">Série selecionada no gráfico acima. Os resíduos grandes, positivos e negativos, se alternam sem padrão: a variação entre anos é dominada pelo clima de cada ano, e não pela tendência.</p>
+  </div>
+
+  <div class="leitura">
+    <div class="pilha">
+      <h3>Como ler o resultado</h3>
+      <ol class="passos">
+        <li><strong>Sinal.</strong> Nas duas séries do MODIS a inclinação é negativa: a reta desce. Na série completa, <span class="num" data-v="modis_total.inclinacao"></span> focos por ano, ou <span class="num" data-v="modis_total.pct"></span> da média anual.</li>
+        <li><strong>Significância.</strong> O intervalo de 95% do MODIS Terra + Aqua não cruza o zero (p = <span class="num" data-v="modis_total.p"></span>). Na série só do Aqua, que tem horário de passagem constante, o resultado é mais firme (p = <span class="num" data-v="modis_aqua.p"></span>).</li>
+        <li><strong>Força.</strong> O R² é baixo. A reta explica pouco da variação: anos de seca forte, como 2007, 2010 e 2024, ficam muito acima dela.</li>
+        <li><strong>Robustez.</strong> No MODIS Terra + Aqua o teste de Mann-Kendall não confirma a queda a 5% (p = <span class="num" data-v="modis_total.kp"></span>). No Aqua confirma (p = <span class="num" data-v="modis_aqua.kp"></span>).</li>
+        <li><strong>VIIRS.</strong> De 2012 a 2025 não há tendência nenhuma (R² = <span class="num" data-v="viirs_snpp.r2"></span>, p = <span class="num" data-v="viirs_snpp.p"></span>).</li>
+      </ol>
+    </div>
+    <div class="pilha">
+      <h3>O período escolhido muda a conclusão</h3>
+      <p>Refizemos a regressão do MODIS Terra + Aqua começando e terminando em anos diferentes:</p>
+      <div class="tabela-caixa">
+        <table>
+          <thead><tr><th>Janela</th><th class="n">Inclinação</th><th class="n">R²</th><th class="n">p</th></tr></thead>
+          <tbody id="tab-sens"></tbody>
+        </table>
+      </div>
+      <p>A queda aparece só quando a janela inclui 2003 a 2007, os anos com mais focos da série. Esse período coincide com a fase de desmatamento alto na Amazônia, que caiu a partir de 2005. É uma hipótese a testar, por exemplo cruzando com os dados de desmatamento do PRODES/INPE. A regressão sozinha não mostra a causa.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="t-frp">
+  <div class="secao-cab"><span class="rotulo">Parte 4 · Regressão 2</span><h2 id="t-frp">Temperatura de brilho e potência do fogo</h2></div>
+  <div class="texto pilha">
+    <p>Aqui cada ponto é um foco do MODIS. <em>x</em> é a temperatura de brilho do pixel (quão quente o satélite o enxerga) e <em>y</em> é o FRP, a energia que o fogo irradia por segundo. A regressão usa <span class="num" data-v="frp.n"></span> focos; o gráfico mostra uma amostra aleatória de <span class="num" data-v="frp.amostra"></span> para continuar legível.</p>
+  </div>
+
+  <div class="figura">
+    <div class="figura-topo">
+      <h3 id="frp-titulo">FRP × brilho</h3>
+      <div class="seletor" role="group" aria-label="Escala do eixo y">
+        <button type="button" id="b-lin" data-escala="linear" aria-pressed="false">FRP em MW</button>
+        <button type="button" id="b-log" data-escala="log" aria-pressed="true">log₁₀(FRP)</button>
+      </div>
+    </div>
+    <div class="legenda">
+      <span><i class="marca-ponto"></i>Foco (amostra)</span>
+      <span><i class="marca-linha"></i>Reta de mínimos quadrados (ajustada com todos os focos)</span>
+    </div>
+    <div class="grafico" id="g-frp"></div>
+    <p class="legenda-fig" id="frp-equacao"></p>
+  </div>
+
+  <div class="leitura">
+    <div class="pilha">
+      <h3>Como ler o resultado</h3>
+      <ul class="lista">
+        <li><strong>A relação é forte e positiva.</strong> Pixel mais quente significa fogo mais intenso: r = <span class="num" data-v="frp.lin.r"></span> na escala original.</li>
+        <li><strong>Mas não é uma reta.</strong> Na escala em MW os pontos sobem numa curva e a reta subestima os focos mais quentes. A física explica: a energia irradiada cresce muito mais rápido que a temperatura.</li>
+        <li><strong>O logaritmo endireita a curva.</strong> Com log₁₀(FRP) no eixo y, o R² sobe de <span class="num" data-v="frp.lin.r2"></span> para <span class="num" data-v="frp.log.r2"></span>. Cada kelvin a mais multiplica o FRP por <span class="num" data-v="frp.fator1"></span>.</li>
+      </ul>
+    </div>
+    <div class="pilha">
+      <h3>Por que sobra tanta variação</h3>
+      <ul class="lista">
+        <li>Um pixel do MODIS tem cerca de 1 km². Um fogo pequeno e muito quente e um fogo grande e morno podem dar o mesmo brilho, com FRP bem diferentes.</li>
+        <li>Na borda da faixa de varredura o pixel é maior e o sinal fica mais diluído.</li>
+        <li>Brilho e FRP vêm da mesma medida do satélite. A regressão descreve a coerência entre as duas grandezas, não uma causa independente.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="t-cuidados">
+  <div class="secao-cab"><span class="rotulo">Parte 5 · Limitações</span><h2 id="t-cuidados">Cuidados antes de tirar conclusões</h2></div>
+  <div class="duas">
+    <ul class="lista">
+      <li><strong>Foco não é área queimada.</strong> Um incêndio grande gera muitos focos, e vários fogos pequenos no mesmo pixel geram um só. A contagem mede atividade de fogo, não hectares.</li>
+      <li><strong>Nuvens e fumaça escondem focos.</strong> Anos muito nublados na estação de queimadas podem parecer anos com menos fogo.</li>
+      <li><strong>Órbitas mudam.</strong> Desde por volta de 2020 o Terra e depois o Aqua derivaram para horários de passagem diferentes, o que muda o que eles enxergam. Isso pode criar tendência artificial nos anos mais recentes.</li>
+    </ul>
+    <ul class="lista">
+      <li><strong>Poucos pontos.</strong> 23 anos no MODIS e 14 no VIIRS. Com tão poucos pontos, um único ano extremo move bastante a reta.</li>
+      <li><strong>Anos vizinhos não são independentes.</strong> Secas plurianuais e fenômenos como El Niño ligam um ano ao seguinte. O valor-p do MQO supõe independência e pode ficar otimista.</li>
+      <li><strong>Sensores diferentes não se somam.</strong> MODIS e VIIRS têm resoluções diferentes, então cada série tem sua própria regressão. Juntar as duas numa reta só criaria um salto falso em 2012.</li>
+    </ul>
+  </div>
+</section>
+
+<section aria-labelledby="t-perguntas">
+  <div class="secao-cab"><span class="rotulo">Parte 6 · Para discutir</span><h2 id="t-perguntas">Perguntas para a equipe</h2></div>
+  <ol class="passos perguntas texto">
+    <li>Se tirarmos 2024, a inclinação do MODIS 2003–2025 fica mais ou menos negativa? Por quê?</li>
+    <li>Por que a série só do Aqua dá um resultado mais firme que a soma Terra + Aqua?</li>
+    <li>O VIIRS conta cerca de quatro vezes mais focos que o MODIS. Isso muda a inclinação em focos/ano? E em % da média?</li>
+    <li>Como separar o efeito do clima do efeito do desmatamento? Que variável colocaríamos numa regressão múltipla (chuva, anomalia de temperatura, área desmatada)?</li>
+    <li>A queda depois de 2004 aparece em todas as regiões? Repetir a regressão por bioma (Amazônia, Cerrado, Pantanal) é um bom próximo passo.</li>
+  </ol>
+</section>
+
+<section aria-labelledby="t-repro">
+  <div class="secao-cab"><span class="rotulo">Parte 7 · Reprodução</span><h2 id="t-repro">Como refazer as contas</h2></div>
+  <div class="texto pilha">
+    <p>Os scripts ficam em <code>analises/</code> no repositório. Os arquivos <code>DL_FIRE_*</code> precisam estar na pasta do projeto.</p>
+  </div>
+  <pre class="cmd">.venv/bin/python analises/regressao_focos_por_ano.py   # focos por ano
+.venv/bin/python analises/regressao_frp_brilho.py      # FRP × brilho
+.venv/bin/python analises/gerar_estudo.py              # gera esta página</pre>
+</section>
+
+<footer class="rodape">
+  <span>Dados: NASA FIRMS (MODIS Collection 6.1 e VIIRS S-NPP 375 m Collection 2), arquivo histórico baixado de firms.modaps.eosdis.nasa.gov.</span>
+  <span>Análise: MQO com scipy.stats.linregress; Theil-Sen e tau de Kendall com scipy.stats.</span>
+</footer>
+
+</div>
+
+<script>
+const FOCOS = /*FOCOS*/null;
+const FRP = /*FRP*/null;
+
+const nf = (casas = 0) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+const fmt = (v, casas = 0) => nf(casas).format(v);
+const sinal = (v, casas = 0) => (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), casas);
+const fmtP = (p) => (p < 0.001 ? "< 0,001" : fmt(p, 3));
+const NS = "http://www.w3.org/2000/svg";
+
+function el(nome, attrs = {}, pai) {
+  const n = document.createElementNS(NS, nome);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (pai) pai.appendChild(n);
+  return n;
+}
+
+function ticks(min, max, alvo = 5) {
+  const passoBruto = (max - min) / alvo;
+  const mag = Math.pow(10, Math.floor(Math.log10(passoBruto)));
+  const passo = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= passoBruto);
+  const lista = [];
+  for (let v = Math.ceil(min / passo) * passo; v <= max + passo * 1e-9; v += passo) lista.push(+v.toFixed(10));
+  return lista;
+}
+
+/* ---------- Valores na prosa ---------- */
+function preencherTexto() {
+  const t = FOCOS.modis_total.ajuste, a = FOCOS.modis_aqua.ajuste, v = FOCOS.viirs_snpp.ajuste;
+  const s2008 = FOCOS.sensibilidade.find((s) => s.inicio === 2008);
+  const valores = {
+    "modis_total.inclinacao_mil": sinal(t.inclinacao / 1000, 1) + " mil",
+    "modis_total.inclinacao": sinal(t.inclinacao),
+    "modis_total.pct": sinal(t.variacao_pct_ano, 1) + "%",
+    "modis_total.p": fmtP(t.p),
+    "modis_total.r2pct": fmt(t.r2 * 100) + "%",
+    "modis_total.kp": fmtP(t.kendall_p),
+    "modis_aqua.p": fmtP(a.p),
+    "modis_aqua.kp": fmtP(a.kendall_p),
+    "viirs_snpp.r2": fmt(v.r2, 3),
+    "viirs_snpp.p": fmtP(v.p),
+    "sens.2008": sinal(s2008.inclinacao),
+    "sens.2008p": fmtP(s2008.p),
+    "frp.periodo": FRP.periodo[0].slice(0, 4) + "–" + FRP.periodo[1].slice(0, 4),
+    "frp.log.r2": fmt(FRP.log.r2, 2),
+    "frp.lin.r2": fmt(FRP.linear.r2, 2),
+    "frp.lin.r": fmt(FRP.linear.r, 2),
+    "frp.fator10": fmt(Math.pow(10, FRP.log.inclinacao * 10), 2) + "×",
+    "frp.fator1": fmt(Math.pow(10, FRP.log.inclinacao), 3) + "× (cerca de +" + fmt((Math.pow(10, FRP.log.inclinacao) - 1) * 100, 1) + "%)",
+    "frp.n": fmt(FRP.linear.n),
+    "frp.amostra": fmt(FRP.amostra.length),
+  };
+  document.querySelectorAll("[data-v]").forEach((n) => {
+    const k = n.getAttribute("data-v");
+    if (k in valores) n.textContent = valores[k];
+  });
+}
+
+/* ---------- Tabelas ---------- */
+function preencherTabelas() {
+  const corpo = document.getElementById("tab-anual");
+  corpo.innerHTML = "";
+  for (const chave of ["modis_total", "modis_aqua", "viirs_snpp"]) {
+    const s = FOCOS[chave], a = s.ajuste;
+    const sig = a.ic95[0] > 0 || a.ic95[1] < 0;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${s.nome}</td><td class="mono">${s.anos[0]}–${s.anos[s.anos.length - 1]}</td>
+      <td class="n">${sinal(a.inclinacao)}</td><td class="n">${sinal(a.ic95[0])} a ${sinal(a.ic95[1])}</td>
+      <td class="n">${sinal(a.variacao_pct_ano, 2)}%</td><td class="n">${fmt(a.r2, 3)}</td><td class="n">${fmtP(a.p)}</td>
+      <td class="n">${sinal(a.theil_sen)}</td><td class="n">${fmtP(a.kendall_p)}</td>
+      <td><span class="selo ${sig ? "sim" : "nao"}">${sig ? (a.inclinacao < 0 ? "Sim, queda" : "Sim, alta") : "Não"}</span></td>`;
+    corpo.appendChild(tr);
+  }
+  const sens = document.getElementById("tab-sens");
+  sens.innerHTML = "";
+  for (const s of FOCOS.sensibilidade) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="mono">${s.inicio}–${s.fim}</td><td class="n">${sinal(s.inclinacao)}</td><td class="n">${fmt(s.r2, 3)}</td><td class="n">${fmtP(s.p)}</td>`;
+    sens.appendChild(tr);
+  }
+}
+
+/* ---------- Gráfico de dispersão genérico ---------- */
+function dispersao(alvo, cfg) {
+  alvo.innerHTML = "";
+  const W = 960, H = cfg.altura || 380, m = { t: 16, r: 18, b: 52, l: 74 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": cfg.rotulo });
+  alvo.appendChild(svg);
+  const px = (v) => m.l + ((v - cfg.x[0]) / (cfg.x[1] - cfg.x[0])) * (W - m.l - m.r);
+  const py = (v) => H - m.b - ((v - cfg.y[0]) / (cfg.y[1] - cfg.y[0])) * (H - m.t - m.b);
+
+  for (const v of ticks(cfg.y[0], cfg.y[1], 5)) {
+    el("line", { x1: m.l, x2: W - m.r, y1: py(v), y2: py(v), class: v === 0 ? "base" : "grade" }, svg);
+    const tx = el("text", { x: m.l - 10, y: py(v) + 4, "text-anchor": "end" }, svg);
+    tx.textContent = cfg.fmtY(v);
+  }
+  for (const v of cfg.ticksX || ticks(cfg.x[0], cfg.x[1], 8)) {
+    const tx = el("text", { x: px(v), y: H - m.b + 20, "text-anchor": "middle" }, svg);
+    tx.textContent = cfg.fmtX(v);
+  }
+  el("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, class: "base" }, svg);
+  const tX = el("text", { x: (m.l + W - m.r) / 2, y: H - 8, "text-anchor": "middle", class: "eixo-titulo" }, svg);
+  tX.textContent = cfg.tituloX;
+  const tY = el("text", { x: 14, y: (m.t + H - m.b) / 2, "text-anchor": "middle", class: "eixo-titulo", transform: `rotate(-90 14 ${(m.t + H - m.b) / 2})` }, svg);
+  tY.textContent = cfg.tituloY;
+
+  if (cfg.reta) {
+    const [x0, x1] = cfg.reta.x;
+    el("line", { x1: px(x0), y1: py(cfg.reta.f(x0)), x2: px(x1), y2: py(cfg.reta.f(x1)), stroke: "var(--line)", "stroke-width": 2.5, "stroke-linecap": "round" }, svg);
+  }
+  const marcas = cfg.pontos.map((p) => {
+    const fora = p.fora;
+    return el("circle", {
+      cx: px(p.x), cy: py(p.y), r: cfg.raio || 6,
+      fill: fora ? "var(--surface)" : "var(--ember)", "fill-opacity": fora ? 1 : (cfg.opacidade ?? 1),
+      stroke: fora ? "var(--ink-3)" : (cfg.raio < 4 ? "none" : "var(--surface)"), "stroke-width": fora ? 1.5 : 2,
+    }, svg);
+  });
+
+  const dica = document.createElement("div");
+  dica.className = "dica"; dica.hidden = true;
+  alvo.appendChild(dica);
+  const destaque = el("circle", { r: (cfg.raio || 6) + 4, fill: "none", stroke: "var(--ink)", "stroke-width": 1.5, visibility: "hidden" }, svg);
+
+  function mover(ev) {
+    const caixa = svg.getBoundingClientRect();
+    const escala = W / caixa.width;
+    const mx = (ev.clientX - caixa.left) * escala, my = (ev.clientY - caixa.top) * escala;
+    let melhor = -1, dist = Infinity;
+    cfg.pontos.forEach((p, i) => {
+      const dx = px(p.x) - mx, dy = cfg.soX ? 0 : py(p.y) - my;
+      const d = dx * dx + dy * dy;
+      if (d < dist) { dist = d; melhor = i; }
+    });
+    const limite = cfg.soX ? 40 : 18;
+    if (melhor < 0 || Math.sqrt(dist) > limite) { esconder(); return; }
+    const p = cfg.pontos[melhor];
+    destaque.setAttribute("cx", px(p.x)); destaque.setAttribute("cy", py(p.y)); destaque.setAttribute("visibility", "visible");
+    dica.innerHTML = cfg.dica(p);
+    dica.hidden = false;
+    dica.style.left = Math.min(Math.max(px(p.x) / escala, 80), caixa.width - 80) + "px";
+    dica.style.top = py(p.y) / escala + "px";
+  }
+  function esconder() { dica.hidden = true; destaque.setAttribute("visibility", "hidden"); }
+  svg.addEventListener("pointermove", mover);
+  svg.addEventListener("pointerleave", esconder);
+  return { svg, marcas };
+}
+
+/* ---------- Regressão 1: focos por ano ---------- */
+let serieAtual = "modis_total";
+
+function desenharAnual() {
+  const s = FOCOS[serieAtual], a = s.ajuste;
+  const todos = Object.entries(s.todos_anos).map(([ano, v]) => ({ x: +ano, y: v }));
+  const usados = new Set(s.anos);
+  const pontos = todos.map((p) => ({ ...p, fora: !usados.has(p.x) }));
+  const yMax = Math.max(...todos.map((p) => p.y)) * 1.08;
+  const anos = todos.map((p) => p.x);
+  const x0 = Math.min(...anos) - 0.6, x1 = Math.max(...anos) + 0.6;
+  const passoX = anos.length > 16 ? 2 : 1;
+  const ticksX = anos.filter((ano) => ano % passoX === 0);
+  const mil = yMax > 1e6;
+  dispersao(document.getElementById("g-anual"), {
+    rotulo: `Focos por ano, ${s.nome}`,
+    x: [x0, x1], y: [0, yMax], ticksX,
+    fmtX: (v) => String(v), fmtY: (v) => (mil ? fmt(v / 1e6, 1) + " mi" : fmt(v / 1000) + " mil"),
+    tituloX: "Ano", tituloY: "Focos de vegetação no ano",
+    pontos, soX: true,
+    reta: { x: [s.anos[0], s.anos[s.anos.length - 1]], f: (x) => a.intercepto + a.inclinacao * x },
+    dica: (p) => {
+      const prev = a.intercepto + a.inclinacao * p.x;
+      return `<strong>${p.x}</strong> · ${fmt(p.y)} focos` + (p.fora ? "<br>fora da regressão" : `<br>reta: ${fmt(prev)} · resíduo ${sinal(p.y - prev)}`);
+    },
+  });
+  document.getElementById("anual-titulo").textContent = `Focos por ano · ${s.nome}`;
+  document.getElementById("anual-equacao").textContent =
+    `Reta: focos = ${fmt(a.intercepto)} ${a.inclinacao < 0 ? "−" : "+"} ${fmt(Math.abs(a.inclinacao))} × ano · R² = ${fmt(a.r2, 3)} · p = ${fmtP(a.p)} · n = ${a.n} anos (${s.anos[0]}–${s.anos[s.anos.length - 1]})`;
+  desenharResiduos();
+}
+
+function desenharResiduos() {
+  const s = FOCOS[serieAtual], a = s.ajuste;
+  const alvo = document.getElementById("g-residuos");
+  alvo.innerHTML = "";
+  const W = 960, H = 260, m = { t: 14, r: 18, b: 40, l: 74 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Resíduos da regressão por ano" });
+  alvo.appendChild(svg);
+  const lim = Math.max(...a.residuos.map(Math.abs)) * 1.1;
+  const n = s.anos.length, faixa = (W - m.l - m.r) / n;
+  const py = (v) => m.t + ((lim - v) / (2 * lim)) * (H - m.t - m.b);
+  const mil = lim > 5e5;
+  for (const v of ticks(-lim, lim, 4)) {
+    el("line", { x1: m.l, x2: W - m.r, y1: py(v), y2: py(v), class: v === 0 ? "base" : "grade" }, svg);
+    const t = el("text", { x: m.l - 10, y: py(v) + 4, "text-anchor": "end" }, svg);
+    t.textContent = mil ? sinal(v / 1e6, 1) + " mi" : sinal(v / 1000) + " mil";
+  }
+  const dica = document.createElement("div");
+  dica.className = "dica"; dica.hidden = true; alvo.appendChild(dica);
+  s.anos.forEach((ano, i) => {
+    const r = a.residuos[i];
+    const larg = Math.max(faixa - 2, 2) * 0.7;
+    const x = m.l + i * faixa + (faixa - larg) / 2;
+    const y = r >= 0 ? py(r) : py(0);
+    const alt = Math.max(Math.abs(py(r) - py(0)), 1);
+    el("rect", { x, y, width: larg, height: alt, rx: 3, fill: r >= 0 ? "var(--pos)" : "var(--neg)" }, svg);
+    if (n <= 16 || i % 2 === 0) {
+      const t = el("text", { x: x + larg / 2, y: H - m.b + 18, "text-anchor": "middle" }, svg);
+      t.textContent = String(ano);
+    }
+    const alvoHit = el("rect", { x: m.l + i * faixa, y: m.t, width: faixa, height: H - m.t - m.b, fill: "transparent" }, svg);
+    alvoHit.addEventListener("pointerenter", () => {
+      const caixa = svg.getBoundingClientRect(), esc = caixa.width / W;
+      dica.innerHTML = `<strong>${ano}</strong> · resíduo ${sinal(r)} focos`;
+      dica.hidden = false;
+      dica.style.left = Math.min(Math.max((x + larg / 2) * esc, 80), caixa.width - 80) + "px";
+      dica.style.top = Math.min(py(r), py(0)) * esc + "px";
+    });
+    alvoHit.addEventListener("pointerleave", () => { dica.hidden = true; });
+  });
+}
+
+/* ---------- Regressão 2: FRP × brilho ---------- */
+let escalaAtual = "log";
+
+function desenharFRP() {
+  const log = escalaAtual === "log";
+  const aj = log ? FRP.log : FRP.linear;
+  const pontos = FRP.amostra.map(([b, f]) => ({ x: b, y: log ? Math.log10(f) : f, frp: f }));
+  const yVals = pontos.map((p) => p.y);
+  const yMin = log ? Math.floor(Math.min(...yVals) * 2) / 2 : 0;
+  const yMax = log ? Math.ceil(Math.max(...yVals, aj.intercepto + aj.inclinacao * FRP.brilho_max) * 2) / 2 : Math.max(...yVals) * 1.05;
+  dispersao(document.getElementById("g-frp"), {
+    rotulo: "Dispersão de FRP contra temperatura de brilho",
+    altura: 420,
+    x: [Math.floor(FRP.brilho_min / 10) * 10, Math.ceil(FRP.brilho_max / 10) * 10], y: [yMin, yMax],
+    fmtX: (v) => fmt(v) + " K",
+    fmtY: (v) => (log ? fmt(Math.pow(10, v), v < 1 ? 1 : 0) : fmt(v)),
+    tituloX: "Temperatura de brilho (K)",
+    tituloY: log ? "FRP (MW, escala log)" : "FRP (MW)",
+    pontos, raio: 2.6, opacidade: 0.45,
+    reta: { x: [FRP.brilho_min, FRP.brilho_max], f: (x) => aj.intercepto + aj.inclinacao * x },
+    dica: (p) => `${fmt(p.x, 1)} K · ${fmt(p.frp, 1)} MW`,
+  });
+  document.getElementById("frp-titulo").textContent = log ? "log₁₀(FRP) × brilho" : "FRP × brilho";
+  document.getElementById("frp-equacao").textContent = log
+    ? `Reta: log₁₀(FRP) = ${fmt(aj.intercepto, 3)} + ${fmt(aj.inclinacao, 5)} × brilho · R² = ${fmt(aj.r2, 3)} · n = ${fmt(aj.n)} focos. O eixo y mostra o FRP em MW, espaçado em escala logarítmica.`
+    : `Reta: FRP = ${fmt(aj.intercepto, 1)} + ${fmt(aj.inclinacao, 3)} × brilho · R² = ${fmt(aj.r2, 3)} · n = ${fmt(aj.n)} focos. A reta passa abaixo dos focos mais quentes porque a relação real é curva.`;
+}
+
+/* ---------- Controles ---------- */
+function ligarSeletor(atributo, aoMudar) {
+  document.querySelectorAll(`[data-${atributo}]`).forEach((b) => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(`[data-${atributo}]`).forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+      aoMudar(b.getAttribute(`data-${atributo}`));
+    });
+  });
+}
+
+preencherTexto();
+preencherTabelas();
+desenharAnual();
+desenharFRP();
+ligarSeletor("serie", (v) => { serieAtual = v; desenharAnual(); });
+ligarSeletor("escala", (v) => { escalaAtual = v; desenharFRP(); });
+</script>
