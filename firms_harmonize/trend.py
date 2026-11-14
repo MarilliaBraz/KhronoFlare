@@ -51,3 +51,20 @@ def pettitt(valores) -> dict:
     k = abs(u[t])
     p = min(1.0, 2 * np.exp(-6 * k**2 / (n**3 + n**2)))
     return {"indice_quebra": t, "K": float(k), "p": float(p)}
+
+
+def resumo(anos, valores) -> dict:
+    """Os três testes juntos, com a inclinação em % da média por ano e o ano da quebra de Pettitt."""
+    t, y = np.asarray(anos, dtype=int), _serie(valores)
+    sen = sen_slope(t, y)
+    pt = pettitt(y)
+    corte = pt["indice_quebra"] + 1
+    return {
+        "periodo": [int(t[0]), int(t[-1])],
+        "n_anos": int(len(y)),
+        "sen": {**sen, "inclinacao_pct_ano": float(100 * sen["inclinacao"] / y.mean())},
+        "mann_kendall": mann_kendall(y),
+        "pettitt": {**pt, "ano_quebra": int(t[pt["indice_quebra"]])},
+        "media_antes": float(y[:corte].mean()),
+        "media_depois": float(y[corte:].mean()),
+    }
