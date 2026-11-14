@@ -1,0 +1,339 @@
+<title>Space Apps 2026</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: coluna única de leitura (~860px); seções empilhadas; votação ao final com placar vivo */
+:root{
+  --bg:#F3F5F9; --surface:#FFFFFF; --ink:#101A2C; --muted:#5A6478; --line:#DCE1EA;
+  --accent:#2C55D6; --accent-soft:#E4EBFC; --mars:#C9502A; --mars-soft:#FBE9E2;
+  --ok:#1F7A4D; --ok-soft:#E1F3E9;
+  --display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --body:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0D1322; --surface:#151D30; --ink:#E7ECF5; --muted:#9AA5BB; --line:#26304A;
+  --accent:#7D9BFF; --accent-soft:#1E2A4D; --mars:#F08A63; --mars-soft:#3A2219;
+  --ok:#5FD39A; --ok-soft:#173326; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1322; --surface:#151D30; --ink:#E7ECF5; --muted:#9AA5BB; --line:#26304A;
+  --accent:#7D9BFF; --accent-soft:#1E2A4D; --mars:#F08A63; --mars-soft:#3A2219;
+  --ok:#5FD39A; --ok-soft:#173326; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(32px,6vw,48px);font-weight:700;letter-spacing:-.02em}
+h2{font-size:26px;font-weight:600;letter-spacing:-.01em}
+h3{font-size:17px;font-weight:600}
+p{margin:0;max-width:65ch}
+a{color:var(--accent)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+section{display:flex;flex-direction:column;gap:20px}
+.lede{color:var(--muted);font-size:17px}
+
+/* hero */
+header{display:flex;flex-direction:column;gap:18px}
+.clock{display:flex;flex-wrap:wrap;gap:10px}
+.tick{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;min-width:0}
+.tick b{font-family:var(--display);font-size:20px}
+.tick span{font-size:12px;color:var(--muted)}
+.tick.hot{border-color:var(--mars);background:var(--mars-soft)}
+.jump{align-self:flex-start;display:inline-flex;gap:8px;align-items:center;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:999px;padding:10px 18px}
+.jump:focus-visible,button:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+/* regras */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.rule{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.rule .k{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rule.warn{border-left:3px solid var(--mars)}
+ol.fields{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;max-width:70ch}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--surface);white-space:nowrap}
+
+/* desafios */
+.chal{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.c{display:grid;grid-template-columns:28px 1fr 120px;gap:14px;padding:16px 0;border-bottom:1px solid var(--line);align-items:start}
+.c .n{font-family:var(--mono);color:var(--muted);font-size:13px;padding-top:2px}
+.c .main{display:flex;flex-direction:column;gap:6px;min-width:0}
+.c .pt{color:var(--muted);font-size:14px}
+.c .lvl{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.c .teams{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.c .teams b{font-family:var(--mono);font-size:15px;text-align:right}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.c.pick .bar i{background:var(--ok)}
+.tag{font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px;align-self:flex-start}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.hard{background:var(--mars-soft);color:var(--mars)}
+.tag.busy{background:var(--accent-soft);color:var(--accent)}
+@media (max-width:560px){.c{grid-template-columns:1fr}.c .n{display:none}.c .teams{flex-direction:row;align-items:center}.c .teams .bar{flex:1}}
+
+/* tabela apis */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+
+.reco{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.reco .rule h3{margin-bottom:2px}
+
+/* votação */
+#votar{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px max(16px,3vw);gap:18px}
+.status{font-size:14px;color:var(--muted);min-height:1.4em}
+.status.err{color:var(--mars)}
+.podium{display:flex;flex-wrap:wrap;gap:10px}
+.podium .p{flex:1 1 200px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:0}
+.podium .p .pos{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.podium .p b{display:block;font-family:var(--display);font-size:16px}
+.podium .p span{font-size:13px;color:var(--muted)}
+.vlist{display:flex;flex-direction:column;gap:8px}
+.v{display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer;background:var(--bg)}
+.v.on{border-color:var(--accent);background:var(--accent-soft)}
+.v.dis{cursor:default;opacity:.55}
+.v input{width:18px;height:18px;accent-color:var(--accent);margin:0}
+.v .t{display:flex;flex-direction:column;min-width:0}
+.v .t b{font-weight:600;font-size:14px}
+.v .vb{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:6px}
+.v .vb i{display:block;height:100%;background:var(--mars)}
+.v .r{display:flex;align-items:center;gap:8px}
+.v .cnt{font-family:var(--mono);font-size:14px;min-width:2ch;text-align:right}
+.avs{display:flex}
+.avs img{width:22px;height:22px;border-radius:50%;border:2px solid var(--surface);margin-left:-6px;background:var(--line)}
+.avs img:first-child{margin-left:0}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:inherit;font-weight:600;border-radius:999px;padding:10px 20px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.foot{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.bar i,.v .vb i{transition:width .4s ease}}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">NASA Space Apps Challenge · edição 2026</span>
+  <h1>Space Apps 2026: o que precisamos saber</h1>
+  <p class="lede">Resumo das regras, dos 14 desafios e dos dados e APIs de cada um, com a análise de concorrência. No fim, cada pessoa do grupo vota nos desafios que prefere.</p>
+  <div class="clock">
+    <div class="tick hot"><b>14–15 nov</b><span>hackathon</span></div>
+    <div class="tick"><b>sáb 9h</b><span>abre o envio</span></div>
+    <div class="tick hot"><b>dom 23h59</b><span>prazo final (fuso do evento)</span></div>
+    <div class="tick"><b>≤ 6</b><span>pessoas por equipe</span></div>
+  </div>
+  <a class="jump" href="#votar">Ir para a votação ↓</a>
+</header>
+
+<section>
+  <h2>Regras essenciais</h2>
+  <div class="rules">
+    <div class="rule warn"><span class="k">Idioma</span>Tudo em inglês. Vídeo pode ter fala em português, mas precisa de legenda em inglês. Slides só em inglês.</div>
+    <div class="rule warn"><span class="k">Demo</span>Vídeo de até 30 s <b>ou</b> até 7 slides (contando título e introdução). Passou disso, fica fora da avaliação global.</div>
+    <div class="rule warn"><span class="k">Dados da NASA</span>É obrigatório usar pelo menos 1 dado ou recurso da NASA para concorrer a prêmio global.</div>
+    <div class="rule"><span class="k">Equipe</span>Até 6 pessoas, todas confirmadas no mesmo evento local. Quem está em lista de espera precisa ser aceito ou trocar de evento.</div>
+    <div class="rule"><span class="k">Inteligência artificial</span>O site chama de "SI". Pode usar, mas não para ter a ideia da solução. Imagem e vídeo de IA precisam de marca d'água; código e dados de IA precisam ser declarados.</div>
+    <div class="rule"><span class="k">Outras proibições</span>Nada de imagem, voz ou semelhança de menores de 18 anos. Nada de logo ou marca da NASA em conteúdo gerado.</div>
+    <div class="rule"><span class="k">Parceiros</span>Usar dados das agências parceiras é recomendado. A Agência Espacial Brasileira está na lista, ao lado de CSA, ESA, JAXA, ISRO, CONAE e outras.</div>
+    <div class="rule"><span class="k">Inscrição</span>Aberta até o fim do hackathon: conta, inscrição, evento local (ou o Universal virtual) e equipe.</div>
+  </div>
+
+  <h3>Campos da página do projeto</h3>
+  <ol class="fields">
+    <li><b>Project Name</b></li>
+    <li><b>High-Level Summary</b>: o que fizemos, como resolve o desafio, por que importa.</li>
+    <li><b>Link to Project Demo</b>: vídeo ou slides, com link público.</li>
+    <li><b>Link to Final Project</b>: site, GitHub ou Drive, sem login.</li>
+    <li><b>Detailed Description</b>: o que faz, como funciona, benefícios, ferramentas.</li>
+    <li><b>Use of SI</b>: onde e como usamos IA. Os jurados não veem essa resposta.</li>
+    <li><b>NASA Data</b>: quais dados da NASA usamos.</li>
+    <li><b>Partner Data &amp; References</b>: todas as fontes, código e imagens.</li>
+  </ol>
+  <p>Depois: aceitar os termos, marcar "Confirm All Work is Original" e clicar em <b>Submit for Judging</b>. Dá para reenviar até o prazo, e vale o último envio. Teste todos os links numa janela anônima.</p>
+
+  <h3>Como o projeto é julgado</h3>
+  <div class="chips"><span class="chip">Impact</span><span class="chip">Creativity</span><span class="chip">Validity</span><span class="chip">Relevance</span><span class="chip">Presentation</span></div>
+  <p>Jurados locais escolhem os indicados globais. Especialistas da NASA e das agências parceiras escolhem os finalistas, e um comitê executivo define os 10 vencedores: Best Use of Science, Data e Technology, Galactic Impact, Best Mission Concept, Most Inspirational, Best Storytelling, Global Connection, Art &amp; Technology e Local Impact.</p>
+</section>
+
+<section>
+  <h2>Os 14 desafios</h2>
+  <p class="foot">Equipes inscritas em cada desafio em 13/11/2026, cerca de 19,5 mil no total. São equipes inscritas, não projetos enviados. Ordenado da mais para a menos disputada.</p>
+  <div class="chal" id="chal"></div>
+</section>
+
+<section>
+  <h2>APIs que mais se repetem</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Fonte</th><th>Desafios</th><th>Acesso por código</th></tr></thead>
+    <tbody>
+      <tr><td>Earthdata Search / CMR</td><td>Fazendas, Análogos, NISAR</td><td>Sim: CMR API, <span class="mono">earthaccess</span></td></tr>
+      <tr><td>RADARSAT (CSA) + tutorial SAR</td><td>Tendências, Análogos, NISAR</td><td>Download + Python</td></tr>
+      <tr><td>Worldview / GIBS</td><td>Fazendas, Mapa de Marte, Análogos</td><td>Sim: tiles WMTS</td></tr>
+      <tr><td>Mars Trek / Moon Trek</td><td>Astronauta júnior, Mapa de Marte, Pouso lunar</td><td>Sim: tiles WMTS</td></tr>
+      <tr><td>MODIS / VIIRS / FIRMS</td><td>Fazendas, Focos de incêndio</td><td>Sim: FIRMS API, AppEEARS</td></tr>
+      <tr><td>api.nasa.gov (APOD, DONKI, Mars Photos)</td><td>Astronauta júnior (útil em vários)</td><td>Sim, chave gratuita</td></tr>
+      <tr><td>OSDR / RadLab</td><td>Astronauta júnior (útil em Saúde)</td><td>Sim: API de busca</td></tr>
+      <tr><td>JPL Horizons</td><td>Pouso lunar</td><td>Sim: API REST</td></tr>
+      <tr><td>NASA POWER</td><td>Fazendas</td><td>Sim: API REST</td></tr>
+      <tr><td>IRSA (SPHEREx) / Gaia</td><td>Planet X</td><td>Sim: TAP / <span class="mono">astroquery</span></td></tr>
+      <tr><td>ASF Vertex (NISAR)</td><td>NISAR</td><td>Sim: <span class="mono">asf_search</span></td></tr>
+    </tbody>
+  </table></div>
+  <p>As mais versáteis são <b>api.nasa.gov, Earthdata, GIBS/Worldview, FIRMS e NASA POWER</b>: REST simples, sem processamento pesado, úteis em mais de um desafio.</p>
+</section>
+
+<section>
+  <h2>Análise e recomendação</h2>
+  <p>Os quatro desafios de app, jogo ou história para iniciantes reúnem quase metade das equipes. Os que pedem dado científico pesado (radar, infravermelho, focos de incêndio) têm de 3 a 5 vezes menos concorrência.</p>
+  <div class="reco">
+    <div class="rule"><span class="tag ok">Melhor custo-benefício</span><h3>Focos de incêndio MODIS/VIIRS</h3>790 equipes. Uma única API bem documentada (FIRMS) e forte impacto no Brasil: Amazônia, Cerrado, Pantanal.</div>
+    <div class="rule"><span class="tag ok">Menos disputado</span><h3>Earth Information Jukebox</h3>602 equipes. Aceita iniciantes e combina com os prêmios Art &amp; Technology e Storytelling.</div>
+    <div class="rule"><span class="tag busy">Bom equilíbrio</span><h3>Pouso lunar e Fazendas</h3>Escopo claro com Horizons e Moon Trek. Fazendas é muito aplicável, mas disputado e com dados auxiliares centrados nos EUA.</div>
+    <div class="rule"><span class="tag hard">Arriscado em 48 h</span><h3>NISAR e SPHEREx</h3>Pouca concorrência, mas arquivos grandes e processamento científico.</div>
+  </div>
+</section>
+
+<section id="votar">
+  <span class="eyebrow">Votação do grupo</span>
+  <h2>Qual desafio vamos encarar?</h2>
+  <p>Marque <b>até 3 desafios</b> e salve. Os votos ficam guardados nesta página e todo mundo do grupo vê o placar ao vivo. Dá para mudar o voto quando quiser.</p>
+  <div class="podium" id="podium"></div>
+  <div class="status" id="status" role="status">Carregando os votos…</div>
+  <div class="vlist" id="vlist"></div>
+  <div class="actions">
+    <button id="save" type="button" disabled>Salvar meu voto</button>
+    <button id="clear" type="button" class="ghost" hidden>Retirar meu voto</button>
+    <span class="foot" id="mine"></span>
+  </div>
+</section>
+
+<p class="foot">Fonte: spaceappschallenge.org, páginas dos desafios (abas Resources e Teams), guia de envio de projetos e página de prêmios, consultadas em 13/11/2026.</p>
+</div>
+
+<script>
+const CH = [
+ {id:"health", en:"Health Monitoring Software", pt:"Software que coleta indicadores de saúde de astronautas e ajuda a agir sobre eles.", lvl:"Intermediário", teams:2882, tag:["busy","Mais disputado"], apis:["5 Hazards (HRP)","Riscos HRP","CSA radiação"], note:"Não traz dataset próprio: buscar dados no OSDR ou no DONKI."},
+ {id:"discarded", en:"Discarded Equipment Storytelling", pt:"Contar a história dos equipamentos que a NASA deixou na Lua, em Marte e no espaço.", lvl:"Iniciante · Intermediário", teams:2587, apis:["NSSDCA","Apollo LM/LRV/ALSEP","Viking, Spirit, Ingenuity…"]},
+ {id:"missiongame", en:"Space Mission Design Game", pt:"Jogo para projetar, gerenciar e simular uma missão espacial completa.", lvl:"Iniciante · Intermediário", teams:1946, apis:["GMAT","Mission Viz","Concept Maturity Levels","CubeSat 101"]},
+ {id:"junior", en:"Junior Astronaut Mission Trainer", pt:"Jogo em que o aluno administra um posto na Lua ou em Marte.", lvl:"Iniciante · Intermediário", teams:1912, apis:["api.nasa.gov","DONKI","OSDR API","RadLab","Mars Trek"]},
+ {id:"farms", en:"Field Shift: Adapting Farms", pt:"Ferramenta de decisão para rotação de culturas com dados de satélite.", lvl:"Intermediário · Avançado", teams:1728, apis:["SMAP","GPM/IMERG","Landsat","MODIS/VIIRS","NASA POWER","ECOSTRESS","SRTM","Sentinel-2","ERA5"]},
+ {id:"trend", en:"Earth System Trend Detective", pt:"Escolher variáveis da Terra, ver séries temporais e testar se a mudança é significativa.", lvl:"Avançado", teams:1245, apis:["Giovanni","AppEEARS","Hydrology TS","NOAA CDO","KNMI","CSA RCM/SWOT"]},
+ {id:"marsmap", en:"Interplanetary Survival Guide: Martian Map", pt:"Mapa em camadas de uma rota em Marte para uma caminhada de astronauta.", lvl:"Intermediário", teams:1207, apis:["Mars Trek","Mapas USGS","Imagens Perseverance","Worldview"]},
+ {id:"flame", en:"Flame in Freefall", pt:"Painel com IA que resume e interpreta experimentos de combustão em microgravidade.", lvl:"Intermediário · Avançado", teams:1033, apis:["PSI Combustion Repository","NASA Combustion Science"]},
+ {id:"lunar", en:"Lunar Landing Site Navigator", pt:"Comparar locais e datas de pouso no polo sul lunar: Sol, Terra, energia e comunicação.", lvl:"Intermediário · Avançado", teams:1021, apis:["JPL Horizons API","Moon Trek","QuickMap (LRO)"]},
+ {id:"analogs", en:"Moon & Mars Base Analogs on Earth", pt:"Achar lugares na Terra parecidos com futuras bases na Lua e em Marte.", lvl:"Todos os níveis", teams:975, apis:["Earthdata","Worldview","PDS","LRO / Diviner","Copernicus","JAXA G-Portal"]},
+ {id:"spherex", en:"Planet X and SPHEREx", pt:"Ferramenta pública para ver como o céu infravermelho do SPHEREx muda.", lvl:"Avançado", teams:840, tag:["hard","Alta barreira técnica"], apis:["IRSA","Notebooks SPHEREx","Gaia DR3","NEOSSat"]},
+ {id:"fires", en:"MODIS & VIIRS Hot Spots", pt:"Calendário de queimadas que harmoniza os focos de incêndio de dois sensores.", lvl:"Intermediário · Avançado", teams:790, tag:["ok","Recomendado"], apis:["FIRMS API"]},
+ {id:"nisar", en:"Dancing with the SARs", pt:"App com radar NISAR para acompanhar mudanças na superfície da Terra.", lvl:"Intermediário · Avançado", teams:699, tag:["hard","Alta barreira técnica"], apis:["ASF Vertex","Earthdata","ARSET","SAOCOM","RADARSAT"]},
+ {id:"jukebox", en:"The Earth Information Jukebox", pt:"Transformar visualizações da Terra em som gerado em tempo real.", lvl:"Iniciante · Intermediário", teams:602, tag:["ok","Menos disputado"], apis:["EIC / SVS","Sonificação Caldwell 73","GEDI","GEOS Aerosols"]}
+];
+const IDS = new Set(CH.map(c=>c.id));
+const BY = Object.fromEntries(CH.map(c=>[c.id,c]));
+const MAXT = Math.max(...CH.map(c=>c.teams));
+const fmt = n => n.toLocaleString("pt-BR");
+function el(tag, cls, text){const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e;}
+
+// Lista de desafios
+(function(){
+  const box=document.getElementById("chal");
+  CH.forEach((c,i)=>{
+    const row=el("div","c"+(c.tag&&c.tag[0]==="ok"?" pick":""));
+    row.append(el("div","n",String(i+1).padStart(2,"0")));
+    const m=el("div","main");
+    if(c.tag) m.append(el("span","tag "+c.tag[0],c.tag[1]));
+    m.append(el("h3",null,c.en), el("div","pt",c.pt), el("div","lvl",c.lvl));
+    const chips=el("div","chips"); c.apis.forEach(a=>chips.append(el("span","chip",a))); m.append(chips);
+    if(c.note) m.append(el("div","pt",c.note));
+    const t=el("div","teams"); t.append(el("b",null,fmt(c.teams)));
+    const bar=el("div","bar"); const fill=el("i"); fill.style.width=(c.teams/MAXT*100).toFixed(1)+"%"; bar.append(fill); t.append(bar);
+    row.append(m,t); box.append(row);
+  });
+})();
+
+// Votação
+const MAXP=3;
+let db=null, user=null, me=null, votes={}, picks=new Set(), dirty=false, writable=true, busy=false;
+const $=id=>document.getElementById(id);
+function setStatus(t,err){const s=$("status"); s.textContent=t; s.classList.toggle("err",!!err);}
+
+async function render(){
+  const counts={}; const voters={};
+  CH.forEach(c=>{counts[c.id]=0; voters[c.id]=[];});
+  Object.entries(votes).forEach(([uid,ps])=>ps.forEach(p=>{counts[p]++; voters[p].push(uid);}));
+  const total=Object.keys(votes).length;
+  const maxv=Math.max(1,...Object.values(counts));
+  let profs={};
+  if(user){ try{ profs=await user.profiles(Object.keys(votes)); }catch(e){ profs={}; } }
+
+  // pódio
+  const pod=$("podium"); pod.replaceChildren();
+  const ranked=CH.filter(c=>counts[c.id]>0).sort((a,b)=>counts[b.id]-counts[a.id]).slice(0,3);
+  if(!ranked.length){ pod.append(el("div","foot", total? "" : "Ainda não há votos. O placar aparece aqui assim que alguém votar.")); }
+  ranked.forEach((c,i)=>{const p=el("div","p"); p.append(el("div","pos",(i+1)+"º lugar"), el("b",null,c.en), el("span",null,counts[c.id]+(counts[c.id]===1?" voto":" votos"))); pod.append(p);});
+
+  // lista
+  const list=$("vlist"); list.replaceChildren();
+  const full=picks.size>=MAXP;
+  CH.forEach(c=>{
+    const on=picks.has(c.id); const dis=!writable||!me||(!on&&full);
+    const lab=el("label","v"+(on?" on":"")+(dis&&!on?" dis":""));
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.id="v-"+c.id; cb.checked=on; cb.disabled=dis&&!on || !writable || !me;
+    cb.addEventListener("change",()=>{ if(cb.checked){ if(picks.size<MAXP) picks.add(c.id); } else picks.delete(c.id); dirty=true; render(); });
+    const t=el("div","t"); t.append(el("b",null,c.en));
+    const vb=el("div","vb"); const f=el("i"); f.style.width=(counts[c.id]/maxv*100)+"%"; vb.append(f); t.append(vb);
+    const r=el("div","r"); const avs=el("div","avs");
+    voters[c.id].slice(0,6).forEach(uid=>{const p=profs[uid]; const img=document.createElement("img"); img.alt=(p&&p.name)||"Alguém"; img.title=(p&&p.name)||"Alguém"; if(p) img.src=p.avatarUrl; avs.append(img);});
+    r.append(avs, el("span","cnt",String(counts[c.id])));
+    lab.append(cb,t,r); list.append(lab);
+  });
+
+  const mine=votes[me]||[];
+  $("save").disabled=!writable||!me||busy||!dirty;
+  $("clear").hidden=!(writable&&me&&mine.length);
+  $("mine").textContent = !me ? "" : (dirty ? `${picks.size} de ${MAXP} marcados, ainda não salvos.` : (mine.length ? "Seu voto está salvo." : `Marque até ${MAXP} desafios.`));
+  if(db && writable && me) setStatus(total ? `${total} ${total===1?"pessoa votou":"pessoas votaram"}.` : "Nenhum voto ainda.");
+}
+
+async function save(){
+  if(!db||!me) return; busy=true; render();
+  try{ await db.doc("votes/"+me).set({picks:[...picks], updatedAt:new Date().toISOString()}); dirty=false; setStatus("Voto salvo."); }
+  catch(e){ handleWriteErr(e); }
+  busy=false; render();
+}
+async function clearVote(){
+  if(!db||!me) return; busy=true; render();
+  try{ await db.doc("votes/"+me).delete(); picks=new Set(); dirty=false; }
+  catch(e){ handleWriteErr(e); }
+  busy=false; render();
+}
+function handleWriteErr(e){
+  if(e&&e.code==="invalid_argument"){ writable=false; setStatus("Você pode ver o placar, mas não votar. Peça a quem compartilhou acesso de Contributor ou maior.",true); }
+  else if(e&&e.code==="resource_exhausted"){ setStatus("Muitas tentativas seguidas. Espere alguns segundos e salve de novo.",true); }
+  else setStatus("Não foi possível salvar agora. Tente de novo em instantes.",true);
+}
+$("save").addEventListener("click",save);
+$("clear").addEventListener("click",clearVote);
+
+render();
+(async()=>{
+  if(!window.claude||!window.claude.use){ setStatus("A votação funciona quando a página é aberta no claude.ai com login.",true); return; }
+  db=await window.claude.use("db"); user=await window.claude.use("user");
+  if(!db){ setStatus("A votação não está disponível nesta visualização. Abra a página no claude.ai com login.",true); render(); return; }
+  me=user?await user.id():null;
+  if(!me){ writable=false; setStatus("Entre na sua conta para votar.",true); }
+  if(user){ try{ const w=await user.can("data.write"); if(w===false) writable=false; }catch(e){} }
+  let first=true;
+  const timer=setTimeout(()=>{ if(first) setStatus("Não foi possível carregar os votos ainda. Verifique a conexão.",true); },10000);
+  db.collection("votes").onSnapshot(snap=>{
+    const next={};
+    snap.docs.forEach(d=>{const x=d.data(); if(x&&Array.isArray(x.picks)){ const ps=[...new Set(x.picks.filter(p=>IDS.has(p)))].slice(0,MAXP); if(ps.length) next[d.id]=ps; }});
+    votes=next;
+    if(me&&!dirty) picks=new Set(votes[me]||[]);
+    if(!snap.metadata.fromCache){ first=false; clearTimeout(timer); }
+    render();
+  }, err=>{ clearTimeout(timer); first=false; setStatus("A votação ficou indisponível. Recarregue a página mais tarde.",true); });
+})();
+</script>
