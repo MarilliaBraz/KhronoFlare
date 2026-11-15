@@ -161,3 +161,18 @@ def test_positive_proba_rejects_empty_input():
 def test_validation_checks_every_used_column_before_training(col):
     with pytest.raises(ValueError, match=col):
         temporal_validation(_panel().drop(columns=[col]), BASE_FEATURES, TRAIN, TEST, n_estimators=5)
+
+# ---------- Brier só para pontuações declaradas como probabilidade ----------
+
+def test_brier_only_when_score_is_declared_a_probability():
+    y, s = np.array([0, 1, 1]), np.array([0.2, 0.7, 0.9])
+    assert not np.isnan(evaluate(y, s)["brier"])
+    assert np.isnan(evaluate(y, s, probabilistic=False)["brier"])
+
+
+def test_reference_scores_that_are_not_probabilities_have_no_brier():
+    rep = temporal_validation(_panel(), BASE_FEATURES, TRAIN, TEST, n_estimators=10)
+    ref = rep["teste"]["referencias"]
+    assert np.isnan(ref["repetir_mes_atual"]["brier"])       # frp_lag0 sintético cai em [0,1] por acaso
+    assert np.isnan(ref["climatologia"]["brier"])            # P(fogo) ≠ P(mês crítico)
+    assert not np.isnan(ref["sorteio"]["brier"]) and not np.isnan(rep["teste"]["modelo"]["brier"])

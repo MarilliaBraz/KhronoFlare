@@ -48,6 +48,7 @@ def parse_oni(text: str) -> pd.DataFrame:
 
 
 def read_oni(path: Path) -> pd.DataFrame:
+    """Arquivo ONI local → DataFrame (ym_fim, oni). Ver `parse_oni`."""
     return parse_oni(Path(path).read_text())
 
 
@@ -126,6 +127,7 @@ def parse_psl(text: str, label: str) -> pd.DataFrame:
 
 
 def read_tna(path: Path) -> pd.DataFrame:
+    """Arquivo TNA local (formato PSL) → DataFrame (ym, valor). Ver `parse_psl`."""
     return parse_psl(Path(path).read_text(), "TNA")
 
 

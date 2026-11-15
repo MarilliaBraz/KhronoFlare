@@ -66,8 +66,8 @@ def desempenho_por_bioma(test: pd.DataFrame) -> pd.DataFrame:
     for nome, g in grupos:
         y = g["y_critico"].to_numpy()
         linhas[nome] = {"Random Forest": evaluate(y, g["prob"])["roc_auc"],
-                        "Climatologia": evaluate(y, g["p_fogo"])["roc_auc"],
-                        "Repetir o mês atual": evaluate(y, g["frp_lag0"])["roc_auc"],
+                        "Climatologia": evaluate(y, g["p_fogo"], probabilistic=False)["roc_auc"],
+                        "Repetir o mês atual": evaluate(y, g["frp_lag0"], probabilistic=False)["roc_auc"],
                         "celulas": int(g[["cy", "cx"]].drop_duplicates().shape[0])}
     return pd.DataFrame(linhas).T
 

@@ -225,7 +225,7 @@ def cmd_risk_panel(args):
     fused = pd.read_parquet(FRP_DIR / "frp_fused.parquet", columns=["date", "lat", "lon", "frp_harm"])
     panel = build_panel(fused, RISK_RES, RISK_PERIOD, RISK_TRAIN_YEARS)
     RISK_DIR.mkdir(parents=True, exist_ok=True)
-    panel.to_parquet(RISK_DIR / "panel.parquet", index=False)
+    _save_parquet_atomic(panel, RISK_DIR / "panel.parquet")
     cells = panel[["cy", "cx"]].drop_duplicates()
     print(f"Células de {RISK_RES}°: {len(cells):,} | linhas: {len(panel):,} | "
           f"meses-alvo {panel['ano_alvo'].min()}–{panel['ano_alvo'].max()}")
@@ -258,7 +258,7 @@ def cmd_risk_drivers(args):
     panel = panel.drop(columns=[c for c in panel.columns if c.startswith("bioma")])  # idempotente
     panel = add_biome(add_tna(add_oni(panel, oni), tna), biomes, RISK_RES)
     print(f"TNA: {tna['ym'].min()} a {tna['ym'].max()} ({len(tna)} meses) em {TNA_FILE}")
-    panel.to_parquet(RISK_DIR / "panel.parquet", index=False)
+    _save_parquet_atomic(panel, RISK_DIR / "panel.parquet")
     cells = assign_biome(panel[["cy", "cx"]].drop_duplicates(), biomes, RISK_RES)
     print(f"Biomas: {len(cells):,} células; {int(cells['bioma_por_proximidade'].sum())} pelo bioma mais "
           "próximo (centro fora dos polígonos)")
@@ -330,11 +330,26 @@ def cmd_risk_explain(args):
     print(impureza.head(8).round(3).to_string())
 
 
+RISK_COMMANDS = ["risk-panel", "risk-drivers", "risk-train", "risk-explain"]
+
+
+def _save_parquet_atomic(df: pd.DataFrame, dest) -> None:
+    """Grava num temporário e troca: se cair no meio, o arquivo anterior continua inteiro."""
+    tmp = dest.with_name(dest.name + ".tmp")
+    try:
+        df.to_parquet(tmp, index=False)
+        tmp.replace(dest)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="firms_harmonize")
     sub = p.add_subparsers(dest="cmd", required=True)
+    for name in RISK_COMMANDS:   # usam config.RISK_*; não aceitam opções que ignorariam
+        sub.add_parser(name)
     for name in ["status", "boundary", "fetch-recent", "aggregate", "harmonize", "validate", "all",
-                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse", "risk-panel", "risk-drivers", "risk-train", "risk-explain"]:
+                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse"]:
         sp = sub.add_parser(name)
         sp.add_argument("--res", type=float, default=0.25, help="lado da célula em graus")
         sp.add_argument("--min-conf", default="nominal", choices=["low", "nominal", "high"])

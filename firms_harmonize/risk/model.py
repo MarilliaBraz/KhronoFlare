@@ -45,11 +45,11 @@ def make_model(n_estimators: int = 200, seed: int = 0) -> RandomForestClassifier
                                   n_jobs=-1, random_state=seed)
 
 
-def evaluate(y, score) -> dict:
-    """ROC-AUC e PR-AUC (NaN se só houver uma classe); Brier só quando a pontuação é probabilidade."""
+def evaluate(y, score, probabilistic: bool = True) -> dict:
+    """ROC-AUC e PR-AUC (NaN se só houver uma classe); Brier só se a pontuação for probabilidade do alvo."""
     y, score = np.asarray(y, dtype=int), np.asarray(score, dtype=float)
     both = 0 < y.sum() < len(y)
-    is_prob = bool(len(score)) and score.min() >= 0 and score.max() <= 1
+    is_prob = probabilistic and bool(len(score))
     return {
         "n": int(len(y)),
         "prevalencia": float(y.mean()) if len(y) else float("nan"),
@@ -78,9 +78,14 @@ def _check(panel: pd.DataFrame, features: list[str]) -> None:
 
 
 def _references(test: pd.DataFrame) -> dict:
-    return {"sorteio": np.full(len(test), 0.5),
-            "repetir_mes_atual": test["frp_lag0"].to_numpy(float),
-            "climatologia": test["p_fogo"].to_numpy(float)}
+    """Pontuações de referência e se são probabilidade do alvo (só o sorteio é; P(fogo) não é P(crítico))."""
+    return {"sorteio": (np.full(len(test), 0.5), True),
+            "repetir_mes_atual": (test["frp_lag0"].to_numpy(float), False),
+            "climatologia": (test["p_fogo"].to_numpy(float), False)}
+
+
+def _evaluate_references(test: pd.DataFrame, y: np.ndarray) -> dict:
+    return {k: evaluate(y, s, probabilistic=prob) for k, (s, prob) in _references(test).items()}
 
 
 def _by(groups, y: np.ndarray, p: np.ndarray) -> dict:
@@ -114,7 +119,7 @@ def temporal_validation(panel: pd.DataFrame, features: list[str], train_years: t
         "teste": {
             "anos": list(test_years), "linhas": int(len(te)),
             "modelo": evaluate(y, p),
-            "referencias": {k: evaluate(y, s) for k, s in _references(te).items()},
+            "referencias": _evaluate_references(te, y),
             "por_ano": _by(te["ano_alvo"], y, p),
             "por_bioma": _by(te["bioma"], y, p),
             "por_tipo": _by(_kind(te), y, p),
@@ -173,7 +178,7 @@ def spatial_validation(panel: pd.DataFrame, features: list[str], train_years: tu
         "blocos_graus": block_deg, "grupos": n_folds,
         "teste": {"anos": list(test_years), "linhas": int(in_test.sum()),
                   "modelo": evaluate(y, pred[in_test]),
-                  "referencias": {k: evaluate(y, s) for k, s in _references(te_all).items()}},
+                  "referencias": _evaluate_references(te_all, y)},
         "por_grupo": groups,
     }
 
@@ -191,7 +196,7 @@ def grouped_permutation_importance(model: RandomForestClassifier, test: pd.DataF
         drops = []
         for _ in range(n_repeats):
             shuffled = x.copy()
-            shuffled[:, idx] = x[rng.permutation(len(x))][:, idx]
+            shuffled[:, idx] = x[np.ix_(rng.permutation(len(x)), idx)]   # só as colunas do grupo
             auc = roc_auc_score(y, positive_proba(model, pd.DataFrame(shuffled, columns=features)))
             drops.append(base - auc)
         rows[name] = {"queda_auc": float(np.mean(drops)), "desvio": float(np.std(drops))}
