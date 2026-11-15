@@ -1,0 +1,92 @@
+{
+  "modelo": "Random Forest sem índice climático",
+  "treino": [
+    2004,
+    2016
+  ],
+  "teste": [
+    2017,
+    2021
+  ],
+  "mapa": {
+    "mes": "2020-10",
+    "criterio": "mês-alvo de pico (ago–out) com maior ΣFRP no mês anterior",
+    "celulas": 2860,
+    "criticas": 817,
+    "n": 2860,
+    "prevalencia": 0.2856643356643357,
+    "roc_auc": 0.7497997460954233,
+    "pr_auc": 0.5296932185411111,
+    "brier": 0.18432716124536203
+  },
+  "roc_auc_por_bioma": {
+    "Brasil": {
+      "Random Forest": 0.724,
+      "Climatologia": 0.616,
+      "Repetir o mês atual": 0.612,
+      "celulas": 2860.0
+    },
+    "Amazônia": {
+      "Random Forest": 0.791,
+      "Climatologia": 0.706,
+      "Repetir o mês atual": 0.649,
+      "celulas": 1312.0
+    },
+    "Caatinga": {
+      "Random Forest": 0.698,
+      "Climatologia": 0.569,
+      "Repetir o mês atual": 0.583,
+      "celulas": 284.0
+    },
+    "Cerrado": {
+      "Random Forest": 0.615,
+      "Climatologia": 0.47,
+      "Repetir o mês atual": 0.535,
+      "celulas": 684.0
+    },
+    "Mata Atlântica": {
+      "Random Forest": 0.652,
+      "Climatologia": 0.543,
+      "Repetir o mês atual": 0.587,
+      "celulas": 438.0
+    },
+    "Pampa": {
+      "Random Forest": 0.711,
+      "Climatologia": 0.642,
+      "Repetir o mês atual": 0.622,
+      "celulas": 83.0
+    },
+    "Pantanal": {
+      "Random Forest": 0.739,
+      "Climatologia": 0.554,
+      "Repetir o mês atual": 0.684,
+      "celulas": 59.0
+    }
+  },
+  "importancia_grupos": {
+    "historico_recente": {
+      "queda_auc": 0.122,
+      "desvio": 0.0012
+    },
+    "climatologia": {
+      "queda_auc": 0.0858,
+      "desvio": 0.0006
+    },
+    "sazonalidade": {
+      "queda_auc": 0.0283,
+      "desvio": 0.0006
+    },
+    "ano_anterior_e_12m": {
+      "queda_auc": 0.0253,
+      "desvio": 0.0006
+    },
+    "posicao": {
+      "queda_auc": 0.0151,
+      "desvio": 0.0003
+    },
+    "bioma": {
+      "queda_auc": 0.0066,
+      "desvio": 0.0002
+    }
+  }
+}

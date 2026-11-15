@@ -11,6 +11,10 @@
     python -m firms_harmonize frp-match       # FRP: pares Aqua × S-NPP (pegada MODIS, Δt ≤ 5 min) → pairs.parquet
     python -m firms_harmonize frp-calibrate   # FRP: modelo ln V = a + b ln M + c VZA, validado fora da amostra
     python -m firms_harmonize frp-fuse        # FRP: fusão diária no pixel MODIS → frp_fused.parquet, frp_anual.csv
+    python -m firms_harmonize risk-panel      # risco: painel célula 0,5° × mês com histórico e alvo de mês crítico
+    python -m firms_harmonize risk-drivers    # risco: ONI, TNA (NOAA) e bioma (IBGE) no painel
+    python -m firms_harmonize risk-train      # risco: Random Forest, validação temporal e espacial
+    python -m firms_harmonize risk-explain    # risco: importância das variáveis (permutação agrupada)
 """
 from __future__ import annotations
 
@@ -215,9 +219,135 @@ def cmd_frp_fuse(args):
                 "frp_harm_mediana", "frac_viirs"]].round(3).to_string(index=False))
 
 
+def cmd_risk_panel(args):
+    from .config import RISK_DIR, RISK_PERIOD, RISK_RES, RISK_TEST_YEARS, RISK_TRAIN_YEARS
+    from .risk.panel import build_panel
+    fused = pd.read_parquet(FRP_DIR / "frp_fused.parquet", columns=["date", "lat", "lon", "frp_harm"])
+    panel = build_panel(fused, RISK_RES, RISK_PERIOD, RISK_TRAIN_YEARS)
+    RISK_DIR.mkdir(parents=True, exist_ok=True)
+    _save_parquet_atomic(panel, RISK_DIR / "panel.parquet")
+    cells = panel[["cy", "cx"]].drop_duplicates()
+    print(f"Células de {RISK_RES}°: {len(cells):,} | linhas: {len(panel):,} | "
+          f"meses-alvo {panel['ano_alvo'].min()}–{panel['ano_alvo'].max()}")
+    for nome, anos in [("treino", RISK_TRAIN_YEARS), ("teste", RISK_TEST_YEARS)]:
+        sel = panel["ano_alvo"].between(*anos)
+        print(f"  {nome} {anos}: {sel.sum():,} linhas | mês crítico {panel.loc[sel, 'y_critico'].mean():.1%} "
+              f"| com fogo {(panel.loc[sel, 'alvo_n'] > 0).mean():.1%}")
+    por_ano = panel.groupby("ano_alvo")["y_critico"].mean().mul(100).round(1)
+    print("  % de meses críticos por ano:", por_ano.to_dict())
+    por_mes = panel.groupby("mes_alvo")["y_critico"].mean().mul(100).round(1)
+    print("  % de meses críticos por mês do ano:", por_mes.to_dict())
+
+
+def cmd_risk_drivers(args):
+    from .config import BIOMES_FILE, ONI_FILE, RISK_DIR, RISK_RES, TNA_FILE
+    from .risk.drivers import (BIOME_CODES, add_biome, add_oni, add_tna, assign_biome, fetch_biomes,
+                               fetch_oni, fetch_tna, read_biomes, read_oni, read_tna)
+    if not ONI_FILE.exists():
+        print("Baixando o ONI da NOAA CPC ...", flush=True)
+        fetch_oni(ONI_FILE)
+    if not TNA_FILE.exists():
+        print("Baixando o TNA da NOAA PSL ...", flush=True)
+        fetch_tna(TNA_FILE)
+    if not BIOMES_FILE.exists():
+        print("Baixando os biomas do IBGE (geoftp) ...", flush=True)
+        fetch_biomes(BIOMES_FILE)
+    oni, tna, biomes = read_oni(ONI_FILE), read_tna(TNA_FILE), read_biomes(BIOMES_FILE)
+    print(f"ONI: {oni['ym_fim'].min()} a {oni['ym_fim'].max()} ({len(oni)} trimestres) em {ONI_FILE}")
+    panel = pd.read_parquet(RISK_DIR / "panel.parquet")
+    panel = panel.drop(columns=[c for c in panel.columns if c.startswith("bioma")])  # idempotente
+    panel = add_biome(add_tna(add_oni(panel, oni), tna), biomes, RISK_RES)
+    print(f"TNA: {tna['ym'].min()} a {tna['ym'].max()} ({len(tna)} meses) em {TNA_FILE}")
+    _save_parquet_atomic(panel, RISK_DIR / "panel.parquet")
+    cells = assign_biome(panel[["cy", "cx"]].drop_duplicates(), biomes, RISK_RES)
+    print(f"Biomas: {len(cells):,} células; {int(cells['bioma_por_proximidade'].sum())} pelo bioma mais "
+          "próximo (centro fora dos polígonos)")
+    por_bioma = pd.DataFrame({
+        "celulas": cells.groupby("bioma").size(),
+        "mes_critico_pct": (100 * panel.groupby("bioma")["y_critico"].mean()).round(1),
+        "com_fogo_pct": (100 * panel["alvo_n"].gt(0).groupby(panel["bioma"]).mean()).round(1),
+    })
+    print(por_bioma.rename(index=BIOME_CODES).to_string())
+    fase = pd.cut(panel["oni_atual"], [-9, -0.5, 0.5, 9], labels=["La Niña", "neutro", "El Niño"])
+    resumo = panel.groupby(fase, observed=True).agg(linhas=("y_critico", "size"),
+                                                    mes_critico_pct=("y_critico", "mean"))
+    resumo["mes_critico_pct"] = (100 * resumo["mes_critico_pct"]).round(1)
+    print("Mês crítico por fase do ONI no mês t (todos os anos, descritivo):")
+    print(resumo.to_string())
+
+
+def _risk_table(rep: dict) -> pd.DataFrame:
+    rows = {"Random Forest": rep["teste"]["modelo"], **rep["teste"]["referencias"]}
+    return pd.DataFrame(rows).T[["roc_auc", "pr_auc", "brier"]].round(3)
+
+
+def cmd_risk_train(args):
+    from .config import RISK_DIR, RISK_RES, RISK_TEST_YEARS, RISK_TRAIN_YEARS
+    from .risk.model import BASE_FEATURES, ONI_FEATURES, spatial_validation, temporal_validation
+    panel = pd.read_parquet(RISK_DIR / "panel.parquet")
+    out = {}
+    for nome, feats in [("oni", ONI_FEATURES), ("base", BASE_FEATURES)]:
+        print(f"[{nome}] validação temporal ...", flush=True)
+        out[f"temporal_{nome}"] = temporal_validation(panel, feats, RISK_TRAIN_YEARS, RISK_TEST_YEARS)
+        print(f"[{nome}] validação espacial (blocos de 5°, 5 grupos) ...", flush=True)
+        out[f"espacial_{nome}"] = spatial_validation(panel, feats, RISK_TRAIN_YEARS, RISK_TEST_YEARS,
+                                                     block_deg=5.0, res=RISK_RES, n_folds=5)
+    (RISK_DIR / "validacao.json").write_text(json.dumps(out, indent=2, ensure_ascii=False))
+    for chave in ["temporal_oni", "temporal_base", "espacial_oni", "espacial_base"]:
+        print(f"\n== {chave} (teste {RISK_TEST_YEARS})")
+        print(_risk_table(out[chave]).to_string())
+    t = out["temporal_oni"]["teste"]
+    for k in ["por_ano", "por_bioma", "por_tipo"]:
+        print(f"\n[oni] {k}:")
+        print(pd.DataFrame(t[k]).T[["n", "prevalencia", "roc_auc", "pr_auc"]].round(3).to_string())
+    print("\n[oni] espacial por grupo:")
+    print(pd.DataFrame(out["espacial_oni"]["por_grupo"])[["grupo", "celulas", "n", "roc_auc", "pr_auc"]]
+          .round(3).to_string(index=False))
+
+
+def cmd_risk_explain(args):
+    from .config import RISK_DIR, RISK_TEST_YEARS, RISK_TRAIN_YEARS
+    from .risk.model import BASE_FEATURES, FEATURE_GROUPS, fit_model, grouped_permutation_importance
+    panel = pd.read_parquet(RISK_DIR / "panel.parquet")
+    print("Treinando o modelo principal (sem índice climático) ...", flush=True)
+    model = fit_model(panel, BASE_FEATURES, RISK_TRAIN_YEARS)
+    test = panel[panel["ano_alvo"].between(*RISK_TEST_YEARS)]
+    print("Importância por permutação agrupada no teste (5 repetições) ...", flush=True)
+    grupos = grouped_permutation_importance(model, test, BASE_FEATURES, FEATURE_GROUPS, n_repeats=5)
+    impureza = pd.Series(model.feature_importances_, index=BASE_FEATURES).sort_values(ascending=False)
+    por_bioma = {}
+    for bioma, sub in test.groupby("bioma"):
+        por_bioma[bioma] = grouped_permutation_importance(model, sub, BASE_FEATURES, FEATURE_GROUPS,
+                                                          n_repeats=3)["queda_auc"].round(4).to_dict()
+    out = {"grupos": grupos.round(4).to_dict(orient="index"), "por_bioma": por_bioma,
+           "impureza": impureza.round(4).to_dict()}
+    (RISK_DIR / "importancia.json").write_text(json.dumps(out, indent=2, ensure_ascii=False))
+    print("\nQueda do ROC-AUC ao embaralhar cada grupo (maior = mais importante):")
+    print(grupos.round(4).to_string())
+    print("\nPor bioma (queda do ROC-AUC):")
+    print(pd.DataFrame(por_bioma).round(3).to_string())
+    print("\nImportância por impureza (só referência, enviesada para variáveis contínuas), top 8:")
+    print(impureza.head(8).round(3).to_string())
+
+
+RISK_COMMANDS = ["risk-panel", "risk-drivers", "risk-train", "risk-explain"]
+
+
+def _save_parquet_atomic(df: pd.DataFrame, dest) -> None:
+    """Grava num temporário e troca: se cair no meio, o arquivo anterior continua inteiro."""
+    tmp = dest.with_name(dest.name + ".tmp")
+    try:
+        df.to_parquet(tmp, index=False)
+        tmp.replace(dest)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="firms_harmonize")
     sub = p.add_subparsers(dest="cmd", required=True)
+    for name in RISK_COMMANDS:   # usam config.RISK_*; não aceitam opções que ignorariam
+        sub.add_parser(name)
     for name in ["status", "boundary", "fetch-recent", "aggregate", "harmonize", "validate", "all",
                  "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse"]:
         sp = sub.add_parser(name)
@@ -238,7 +368,8 @@ def main(argv=None):
     run = {"status": cmd_status, "boundary": cmd_boundary, "fetch-recent": cmd_fetch_recent,
            "aggregate": cmd_aggregate, "harmonize": cmd_harmonize, "validate": cmd_validate,
            "frp-prepare": cmd_frp_prepare, "frp-match": cmd_frp_match,
-           "frp-calibrate": cmd_frp_calibrate, "frp-fuse": cmd_frp_fuse}
+           "frp-calibrate": cmd_frp_calibrate, "frp-fuse": cmd_frp_fuse,
+           "risk-panel": cmd_risk_panel, "risk-drivers": cmd_risk_drivers, "risk-train": cmd_risk_train, "risk-explain": cmd_risk_explain}
     if a.cmd == "all":
         for f in (cmd_aggregate, cmd_harmonize, cmd_validate):
             f(a)
