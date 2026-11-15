@@ -1,0 +1,49 @@
+# Atualiza web/data.json com os focos do NASA FIRMS das últimas 24 h, a cada 3 horas.
+# O FIRMS não deixa o navegador ler os arquivos direto (sem CORS), então esta tarefa baixa, processa
+# (web/tools/build_live.py) e grava a cópia no repositório. O painel mostra quando ela foi feita.
+name: FIRMS 24 h
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"      # minuto 17 de cada 3 h (UTC); o FIRMS atualiza os arquivos várias vezes ao dia
+  workflow_dispatch: {}          # botão "Run workflow" para atualizar na hora
+
+permissions:
+  contents: write
+
+concurrency:
+  group: firms-24h
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Malhas municipais do IBGE (guardadas entre execuções)
+        uses: actions/cache@v4
+        with:
+          path: .cache/ibge
+          key: ibge-malhas-minima-v1
+
+      - name: Baixar e processar o FIRMS
+        run: python3 -I web/tools/build_live.py web/data.json --cache .cache/ibge
+
+      - name: Gravar no repositório se mudou
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/data.json
+          if git diff --cached --quiet; then
+            echo "Sem mudança nos dados."
+          else
+            git commit -m "data: focos do NASA FIRMS (24 h) de $(date -u '+%Y-%m-%d %H:%M') UTC"
+            git pull --rebase
+            git push
+          fi

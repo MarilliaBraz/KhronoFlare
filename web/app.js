@@ -3,6 +3,8 @@
 "use strict";
 
 function main(D, C) {
+  // Live data (build_live.py) sends points as lists in the order of point_fields; rebuild the objects.
+  if(D.point_fields) D.points = D.points.map(a => Object.fromEntries(D.point_fields.map((f,i)=>[f, a[i]])));
   const CITIES = C ? C.cities : [];   // [ibge_id, name, uf, lat, lon, capital]; empty if cities.json failed
   const S = {role:'analyst', juris:'PA', filter:'all', sel:null, sound:true, items:{}, log:[], lastCap:null, phone:null, open:{}, phonecap:['phone.none',{}], expanded:new Set(['PA'])};
   const BRT = -3;
@@ -120,9 +122,10 @@ function main(D, C) {
   const stateGeom = Object.fromEntries(D.states.map(s=>[s.uf, s.g]));
   const TIER_RANK = {high:3, elev:2, watch:1};
   const firesTxt = n => t(n>1?'q.fires.n':'q.fires.1',{n:fmtInt(n)});
+  const FIRES_BY_UF = D.points.reduce((m,p)=>{ if(p.uf) m[p.uf]=(m[p.uf]||0)+1; return m; }, {});
   function stateSummary(uf){
     const cs = D.cands.filter(c=>c.uf===uf);
-    const fires = D.points.filter(p=>p.uf===uf).length;
+    const fires = FIRES_BY_UF[uf] || 0;
     const top = cs.reduce((m,c)=> TIER_RANK[c.tier] > (TIER_RANK[m]||0) ? c.tier : m, null);
     return {cs, fires, top};
   }
@@ -160,7 +163,8 @@ function main(D, C) {
   function stateBounds(uf){ return L.polygon(geomLL(stateGeom[uf])).getBounds(); }
 
   /* ---------- map (Leaflet + NASA GIBS imagery) ---------- */
-  const SAT_DATE = '2026-11-12';                       // day of the FIRMS sample shown on the map
+  // Most recent day of imagery: today once the afternoon passes over Brazil are in (after 21 UTC), else yesterday.
+  const SAT_DATE = (()=>{ const d=new Date(); if(d.getUTCHours()<21) d.setUTCDate(d.getUTCDate()-1); return d.toISOString().slice(0,10); })();
   const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
   const BASES = {
     sat:    {path:`VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${SAT_DATE}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`, max:9, credit:'VIIRS NOAA-20 true color'},
@@ -207,21 +211,32 @@ function main(D, C) {
     setBase(baseKey);
     map.fitBounds(BRAZIL, {animate:false});
   }
-  function fireIcon(p, faded){
-    const r=2.6+Math.min(5.5,Math.sqrt(p.frp)*0.8), s=Math.ceil(r*2.6)+2, c=s/2, k=r*1.25;
-    const shape = p.sensor==='VIIRS' ? `<circle cx="${c}" cy="${c}" r="${r}"/>` : `<path d="M${c} ${c-k}L${c+k} ${c}L${c} ${c+k}L${c-k} ${c}Z"/>`;
-    return L.divIcon({className:'fire', iconSize:[s,s], html:`<svg width="${s}" height="${s}" aria-hidden="true" style="fill:${fireColor(p.frp)};fill-opacity:${faded?0.35:0.95};stroke:#10161a;stroke-width:1">${shape}</svg>`});
-  }
+  // Fire points are drawn on a canvas: live FIRMS data has thousands of them. VIIRS as circles, MODIS as diamonds.
+  const fireRenderer = L.canvas({padding:0.3});
+  const Diamond = L.CircleMarker.extend({ _updatePath(){
+    const rd=this._renderer; if(!rd._drawing || this._empty()) return;
+    const p=this._point, ctx=rd._ctx, k=this._radius*1.25;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y-k); ctx.lineTo(p.x+k, p.y); ctx.lineTo(p.x, p.y+k); ctx.lineTo(p.x-k, p.y); ctx.closePath();
+    rd._fillStroke(ctx, this); } });
+  const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  let fireMarkers = [];
   function drawPoints(){
     lPts.clearLayers();
-    D.points.forEach(p=>{
-      if(!p.uf){ L.circleMarker([p.lat,p.lon], {radius:2.5, color:'#000', weight:.5, fillColor:'#9aa4aa', fillOpacity:.8, interactive:false}).addTo(lPts); return; }
-      const m=L.marker([p.lat,p.lon], {icon:fireIcon(p, S.sel && p.mun!==S.sel), keyboard:false, riseOnHover:true,
-        title:t('map.tip',{sensor:p.sensor, sat:p.sat, frp:fmt1(p.frp), time:hhmm(p.time), conf:p.conf})});
+    const col = {f1:cssVar('--f1'), f2:cssVar('--f2'), f3:cssVar('--f3')};
+    const colorOf = f => f>40 ? col.f3 : f>=10 ? col.f2 : col.f1;
+    fireMarkers = D.points.map(p=>{
+      if(!p.uf) return L.circleMarker([p.lat,p.lon], {renderer:fireRenderer, radius:2.5, color:'#000', weight:.5, fillColor:'#9aa4aa', fillOpacity:.8, interactive:false}).addTo(lPts);
+      const Shape = p.sensor==='VIIRS' ? L.CircleMarker : Diamond;
+      const m = new Shape([p.lat,p.lon], {renderer:fireRenderer, radius:2.6+Math.min(5.5,Math.sqrt(p.frp)*0.8),
+        color:'#10161a', weight:1, fillColor:colorOf(p.frp), fillOpacity: S.sel && p.mun!==S.sel ? 0.35 : 0.95});
+      m.bindTooltip(()=>t('map.tip',{sensor:p.sensor, sat:p.sat, frp:fmt1(p.frp), time:hhmm(p.time), conf:p.conf}), {direction:'top', offset:[0,-4]});
       m.on('click', ()=>{ if(byId[p.mun]) select(p.mun); });
-      m.addTo(lPts);
+      m._p = p;
+      return m.addTo(lPts);
     });
   }
+  // Selecting a municipality only fades the other points; no need to rebuild thousands of markers.
+  function fadePoints(){ fireMarkers.forEach(m=>{ if(m._p) m.setStyle({fillOpacity: S.sel && m._p.mun!==S.sel ? 0.35 : 0.95}); }); }
   function drawSelection(){
     lSel.clearLayers();
     if(!S.sel) return;
@@ -240,6 +255,7 @@ function main(D, C) {
   }
   function renderMapControls(){
     const zi=zoomCtl.getContainer().querySelector('.leaflet-control-zoom-in'), zo=zoomCtl.getContainer().querySelector('.leaflet-control-zoom-out');
+    const sb=document.querySelector('[data-base="sat"]'); sb.textContent=t('base.sat',{d:new Date(SAT_DATE+'T12:00:00Z').toLocaleDateString(I18N.locale(),{day:'numeric',month:'short',timeZone:'UTC'})});
     zi.title=t('map.zoomin'); zi.setAttribute('aria-label', t('map.zoomin')); zo.title=t('map.zoomout-btn'); zo.setAttribute('aria-label', t('map.zoomout-btn'));
   }
   document.querySelectorAll('[data-base]').forEach(btn=>btn.addEventListener('click', ()=>setBase(btn.dataset.base)));
@@ -277,6 +293,82 @@ function main(D, C) {
     }
   }
   map.on('zoomend moveend', drawPlaces);
+
+  /* ---------- live detections (INPE, every 10 minutes) and the evidence of where data comes from ---------- */
+  // Points are drawn on a canvas (there can be thousands); detections of the last hour get a pulsing ring.
+  const RECENT_MIN = 60, LIVE_MAX_AGE_MIN = 30;    // older than 30 min since INPE's last file = "delayed"
+  const liveRenderer = L.canvas({padding:0.3});
+  const lLive = L.layerGroup().addTo(map), lRecent = L.layerGroup().addTo(map);
+  const stateBoxes = D.states.map(s=>{ const polys=s.g; const pts=polys.flat(2);
+    return {uf:s.uf, polys, x0:Math.min(...pts.map(p=>p[0])), x1:Math.max(...pts.map(p=>p[0])), y0:Math.min(...pts.map(p=>p[1])), y1:Math.max(...pts.map(p=>p[1]))}; });
+  const ufAt = (lat, lon) => { for(const b of stateBoxes){ if(lon>=b.x0 && lon<=b.x1 && lat>=b.y0 && lat<=b.y1 && inPolys(lon, lat, b.polys)) return b.uf; } return null; };
+  let LIVE = {status:'loading', points:[], files:[]};
+  const minutesAgo = d => Math.max(0, Math.round((Date.now() - d.getTime())/60000));
+  const utcHM = d => `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+  const localDT = d => d.toLocaleString(I18N.locale(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+  function liveState(){
+    if(LIVE.status==='loading') return 'loading';
+    if(!LIVE.latestFile) return 'error';
+    return minutesAgo(LIVE.latestFile.time) <= LIVE_MAX_AGE_MIN && LIVE.status==='live' ? 'live' : 'delayed';
+  }
+  function drawLive(){
+    lLive.clearLayers(); lRecent.clearLayers();
+    LIVE.br.forEach(p=>{
+      L.circleMarker([p.lat,p.lon], {renderer:liveRenderer, radius:3.2, color:'#ffffff', weight:1, fillColor:'#ff3b1f', fillOpacity:.95, interactive:false}).addTo(lLive);
+      if(minutesAgo(p.time) <= RECENT_MIN)
+        L.marker([p.lat,p.lon], {interactive:false, keyboard:false, icon:L.divIcon({className:'live-pulse', iconSize:[22,22], html:'<span></span>'})}).addTo(lRecent);
+    });
+  }
+  function renderLiveBadge(){
+    const b=document.getElementById('livebadge'), st=liveState();
+    b.dataset.state=st;
+    const ago = LIVE.latestFile ? minutesAgo(LIVE.latestFile.time) : 0;
+    b.querySelector('.lb-text').textContent = st==='loading' ? t('live.loading') : st==='error' ? t('live.error')
+      : t(st==='live' ? 'live.on' : 'live.delayed', {m:ago, n:fmtInt(LIVE.br.length)});
+  }
+  function evidenceHtml(){
+    const st=liveState(), m=D.meta;
+    const latestBr = (LIVE.br||[]).reduce((x,p)=> !x || p.time > x ? p.time : x, null);   // newest detection inside Brazil
+    const bySat = {}; (LIVE.br||[]).forEach(p=>{ bySat[p.sat]=(bySat[p.sat]||0)+1; });
+    const sats = Object.entries(bySat).sort((a,b)=>b[1]-a[1]).map(([s,n])=>`<li>${esc(s)} <span class="num">${fmtInt(n)}</span></li>`).join('');
+    const files = (LIVE.files||[]).slice().reverse().slice(0,6).map(f=>`<li><a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.name)}</a> <span class="num">${t('ev.file-count',{n:fmtInt(f.count)})}</span></li>`).join('');
+    const live = LIVE.latestFile ? `
+      <dl class="kv">
+        <dt>${t('ev.latest-file')}</dt><dd><a href="${esc(LIVE.latestFile.url)}" target="_blank" rel="noopener">${utcHM(LIVE.latestFile.time)} UTC</a> (${t('ev.ago',{m:minutesAgo(LIVE.latestFile.time)})})</dd>
+        <dt>${t('ev.latest-det')}</dt><dd>${latestBr ? `${utcHM(latestBr)} UTC (${t('ev.ago',{m:minutesAgo(latestBr)})})` : '–'}</dd>
+        <dt>${t('ev.in-brazil',{h:LiveFires.WINDOW_MIN/60})}</dt><dd class="num">${fmtInt(LIVE.br.length)}</dd>
+        <dt>${t('ev.fetched')}</dt><dd>${localDT(LIVE.fetchedAt)}</dd>
+      </dl>
+      ${sats?`<p class="hint">${t('ev.by-sat')}</p><ul class="ev-list">${sats}</ul>`:''}
+      ${files?`<details class="more"><summary>${t('ev.files')}</summary><ul class="ev-files">${files}</ul></details>`:''}` : `<p class="note">${t('ev.unavailable')}${LIVE.error?` <code>${esc(LIVE.error)}</code>`:''}</p>`;
+    return `<div><span class="eyebrow">${t('ev.eyebrow')}</span><h2 id="sheet-h">${t('ev.h')}</h2></div>
+      <section class="ev"><h3><span class="ev-dot" data-state="${st}"></span>${t('ev.live-h')}</h3>
+        <p class="hint">${t('ev.live-p')} <a href="${esc(LIVE.source||'https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/10min/')}" target="_blank" rel="noopener">dataserver-coids.inpe.br</a></p>${live}</section>
+      <section class="ev"><h3><span class="ev-dot" data-state="${firmsState()}"></span>${t('ev.firms-h')}</h3>${firmsHtml()}</section>
+      <section class="ev"><h3><span class="ev-dot" data-state="live"></span>${t('ev.img-h')}</h3>
+        <p class="hint">${t('ev.img-p',{d:new Date(SAT_DATE+'T12:00:00Z').toLocaleDateString(I18N.locale(),{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'})})} <a href="https://earthdata.nasa.gov/gibs" target="_blank" rel="noopener">NASA GIBS</a></p></section>
+      <div class="actions"><button class="btn primary" data-sa="close">${t('howto.ok')}</button></div>`;
+  }
+  // FIRMS file made by the GitHub task every 3 h: "live" while it is at most FIRMS_MAX_AGE_H old.
+  const FIRMS_MAX_AGE_H = 6;
+  function firmsState(){ const m=D.meta; if(!m || m.kind!=='live') return 'sample';
+    return (Date.now() - new Date(m.generated).getTime())/3600e3 <= FIRMS_MAX_AGE_H ? 'live' : 'delayed'; }
+  function firmsHtml(){
+    const m=D.meta, st=firmsState();
+    if(st==='sample') return `<p class="hint">${t('ev.firms-sample')}</p>`;
+    const hours = Math.round((Date.now() - new Date(m.generated).getTime())/3600e3);
+    const rows = m.sources.map(s=>`<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.sensor)} ${esc(s.satellite)}</a>
+      ${t('ev.firms-src',{n:fmtInt(s.in_brazil), d:localDT(new Date(s.updated))})}</li>`).join('');
+    return `<p class="hint">${t(st==='live'?'ev.firms-live':'ev.firms-delayed',{d:localDT(new Date(m.generated)), h:hours, w:m.window_hours})}</p>
+      <ul class="ev-files">${rows}</ul>
+      ${m.latest_pass?`<p class="hint">${t('ev.firms-pass',{d:localDT(new Date(m.latest_pass))})}</p>`:''}`;
+  }
+  document.getElementById('livebadge').addEventListener('click', ()=>openSheet(evidenceHtml()));
+  LiveFires.start(state=>{
+    LIVE = {...state, br: state.points.map(p=>({...p, uf:ufAt(p.lat,p.lon)})).filter(p=>p.uf)};
+    drawLive(); renderLiveBadge(); renderMapStats();
+  });
+  setInterval(()=>{ renderLiveBadge(); if(LIVE.br) drawLive(); }, 60000);   // "N min ago" and the last-hour rings age
 
   /* ---------- side panel ---------- */
   function renderSide(){
@@ -462,7 +554,7 @@ function main(D, C) {
     try{ navigator.clipboard.writeText(S.lastCap).then(done,fallback); }catch(e){ fallback(); } };
 
   /* ---------- actions ---------- */
-  function select(id){ S.sel=id; if(id) S.expanded.add(byId[id].uf); renderQueue(); drawSelection(); renderSide(); renderMapTitle(); drawPoints(); fitTo(id); }
+  function select(id){ S.sel=id; if(id) S.expanded.add(byId[id].uf); renderQueue(); drawSelection(); renderSide(); renderMapTitle(); fadePoints(); fitTo(id); }
   function renderMapTitle(){ document.getElementById('maptitle').textContent = S.sel ? `${byId[S.sel].name}, ${byId[S.sel].uf}` : t('map.brazil'); }
   function startDraft(c,it){ if(c.uf!==S.juris) return; it.status='draft'; it.lang='pt'; addLog(analyst(), ['log.started',{name:c.name, uf:c.uf}]); }
   function act(name){
@@ -549,9 +641,11 @@ function main(D, C) {
 
   /* ---------- boot ---------- */
   const inBr=D.points.filter(p=>p.uf).length;
-  const renderMapStats = () => { document.getElementById('mapstats').textContent = t('map.stats',{n:fmtInt(inBr), m:D.cands.length, o:fmtInt(D.points.length-inBr)}); };
+  const renderMapStats = () => { const out=D.points.length-inBr;
+    document.getElementById('mapstats').textContent = t(D.meta && D.meta.kind==='live' ? 'map.stats.live' : 'map.stats',{n:fmtInt(inBr), m:fmtInt(D.cands.length), o:fmtInt(out), h:D.meta?D.meta.window_hours:24})
+    + (LIVE.br && LIVE.br.length ? ' ' + t('map.live',{n:fmtInt(LIVE.br.length), h:LiveFires.WINDOW_MIN/60}) : ''); };
   // Everything drawn by this file is redrawn when the interface language changes; an open dialog is closed.
-  function renderTexts(){ renderJuris(); renderSound(); renderPhoneCap(); renderMapStats(); renderMapTitle(); renderQueue(); renderSide(); renderLog(); renderPhoneClock(); renderMapControls(); drawPoints(); drawPlaces(); }
+  function renderTexts(){ renderLiveBadge(); renderJuris(); renderSound(); renderPhoneCap(); renderMapStats(); renderMapTitle(); renderQueue(); renderSide(); renderLog(); renderPhoneClock(); renderMapControls(); drawPoints(); drawPlaces(); }
   I18N.onChange(()=>{ if(!document.getElementById('sheet').hidden) closeSheet(); renderTexts(); });
   buildMap(); renderTexts(); setInterval(renderPhoneClock, 15000);
   select((D.cands.find(c=>c.uf===S.juris)||D.cands[0]).id);
@@ -559,7 +653,8 @@ function main(D, C) {
 
 const getJson = url => fetch(url).then(r => { if (!r.ok) throw new Error(url + ': HTTP ' + r.status); return r.json(); });
 // cities.json is optional: without it the map simply has no place names.
-Promise.all([getJson('data.json'), getJson('cities.json').catch(err => { console.warn(err); return null; })])
+// data.json is the live FIRMS file (refreshed every 3 h); data-sample.json (12 Nov) is the fallback.
+Promise.all([getJson('data.json').catch(err => { console.warn(err); return getJson('data-sample.json'); }), getJson('cities.json').catch(err => { console.warn(err); return null; })])
   .then(([data, cities]) => main(data, cities))
   .catch(err => {
     const box = document.getElementById('side');

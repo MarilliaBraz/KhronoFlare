@@ -1,6 +1,6 @@
 """Gera uma versão de arquivo único do painel (para mandar por e-mail ou publicar como página simples).
 
-Junta index.html, style.css, i18n.js, prefs.js, app.js, data.json, cities.json e o relevo de reserva
+Junta index.html, style.css, i18n.js, prefs.js, live.js, app.js, data.json, cities.json e o relevo de reserva
 (fallback-relief.jpg, como data URI) num só HTML. O Leaflet e as imagens do NASA GIBS continuam vindo
 da internet. A aba "Real phone" vira um aviso, porque depende do ntfy.sh e da página phone.html, que só
 funcionam na versão em pasta (web/).
@@ -54,7 +54,7 @@ def main(out: str) -> None:
     title = re.search(r"<title>.*?</title>", html).group(0)
     links = "\n".join(re.findall(r'<link rel="(?:preconnect|stylesheet)" href="https://[^>]*>', html))
     leaflet = re.search(r'<script src="https://cdnjs\.cloudflare\.com/ajax/libs/leaflet/[^>]*></script>', html).group(0)
-    scripts = "\n".join(f"<script>\n{inline_safe(code)}</script>" for code in (read("i18n.js"), read("prefs.js"), app_js()))
+    scripts = "\n".join(f"<script>\n{inline_safe(code)}</script>" for code in (read("i18n.js"), read("prefs.js"), read("live.js"), app_js()))
     page = (f"<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
             f"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n"
             f"{title}\n{links}\n<style>\n{read('style.css')}</style>\n</head>\n<body>\n{body_html(html)}\n"

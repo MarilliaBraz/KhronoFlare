@@ -9,3 +9,4 @@ __pycache__/
 DL_FIRE_*/
 *.zip
 .coverage
+.cache/
