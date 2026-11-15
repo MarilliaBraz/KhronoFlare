@@ -443,3 +443,16 @@ details.cap{margin:12px 0 0}
 .reach li{font-size:calc(12.5px * var(--fs));background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
 .reach li .uf{color:var(--muted)}
 .reach li.cap{font-weight:600;border-color:var(--ink)}
+
+/* Small screens: map overlays keep a fixed, compact size (they do not grow with A+), so the map stays visible.
+   The rest of the page still scales with the chosen text size. */
+@media (max-width:760px){
+  .maptitle{font-size:13px;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 8px}
+  .maptools{top:10px;bottom:auto;right:8px;gap:4px}
+  .maptools .btn.sm{font-size:12px;min-height:28px;padding:3px 8px}
+  .basemaps button{font-size:11.5px;padding:4px 7px}
+  .legend{left:6px;right:auto;bottom:6px;font-size:11.5px;gap:3px 8px;padding:4px 8px;max-width:calc(100% - 60px)}
+  .legend svg{transform:scale(.9)}
+  .leaflet-container .leaflet-control-attribution{font-size:9.5px;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .place .nm{font-size:11px} .place.capital .nm{font-size:12px} .region span{font-size:15px}
+}
