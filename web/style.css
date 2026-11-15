@@ -385,8 +385,8 @@ details.cap{margin:12px 0 0}
 
 /* ===== Leaflet map with NASA GIBS imagery ===== */
 #map{background:#0b1013;font:inherit}
-.grid .mapwrap{display:flex;flex-direction:column}
-.grid .mapwrap #map{flex:1}
+/* wide screens: the map fills the column; narrower screens keep the fixed heights set above */
+@media (min-width:1181px){.grid .mapwrap{display:flex;flex-direction:column}.grid .mapwrap #map{flex:1}}
 .maptitle,.maptools,.legend,.mapnote{z-index:1000}
 .mapzoom{position:static}
 .maptools{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
