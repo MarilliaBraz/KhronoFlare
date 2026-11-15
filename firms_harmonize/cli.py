@@ -16,6 +16,7 @@
     python -m firms_harmonize risk-train      # risco: Random Forest, validação temporal e espacial
     python -m firms_harmonize risk-explain    # risco: importância das variáveis (permutação agrupada)
     python -m firms_harmonize risk-climatology  # risco: fogo por célula e mês do ano → web/tools/climatologia.json
+    python -m firms_harmonize risk-forecast     # risco: RF final (2004–2021) prevê o mês seguinte → web/tools/previsao_modelo.json
 """
 from __future__ import annotations
 
@@ -345,7 +346,67 @@ def cmd_risk_climatology(args):
           f"({clim['n_years']} anos), {dest.stat().st_size / 1024:.0f} KB")
 
 
-RISK_COMMANDS = ["risk-panel", "risk-drivers", "risk-train", "risk-explain", "risk-climatology"]
+def _snpp_monthly_counts() -> pd.Series:
+    """Focos do S-NPP (confiança nominal e alta) por mês no retângulo do Brasil, dos CSVs brutos."""
+    from .config import BRAZIL_BBOX
+    w, s_, e, n = BRAZIL_BBOX
+    parts = []
+    for path in _frp_csvs(FRP_SOURCES["SNPP"][0]):
+        for ch in pd.read_csv(path, usecols=["latitude", "longitude", "acq_date", "confidence"], chunksize=4_000_000):
+            ch = ch[ch["latitude"].between(s_, n) & ch["longitude"].between(w, e) & (ch["confidence"] != "l")]
+            parts.append(ch.groupby(pd.PeriodIndex(ch["acq_date"], freq="M")).size())
+    return pd.concat(parts).groupby(level=0).sum().sort_index()
+
+
+def cmd_risk_forecast(args):
+    from .config import (BIOMES_FILE, BRAZIL_BBOX, CALIBRATION, RISK_DIR, RISK_PERIOD, RISK_RES,
+                         RISK_TEST_YEARS, RISK_TRAIN_YEARS)
+    from .risk.drivers import add_biome, read_biomes
+    from .risk.forecast import drift_factors, partial_month_scale, prediction_features
+    from .risk.model import BASE_FEATURES, fit_model, positive_proba
+    from .risk.panel import build_panel
+    final_years = (RISK_TRAIN_YEARS[0], RISK_TEST_YEARS[1])     # ajuste final: todos os anos-alvo validados
+    fused = pd.read_parquet(FRP_DIR / "frp_fused.parquet", columns=["date", "lat", "lon", "frp_harm"])
+    biomes = read_biomes(BIOMES_FILE)
+    print(f"Painel de treino {RISK_PERIOD}, anos-alvo {final_years} ...", flush=True)
+    panel = add_biome(build_panel(fused, RISK_RES, RISK_PERIOD, final_years), biomes, RISK_RES)
+    model = fit_model(panel, BASE_FEATURES, final_years)
+
+    w, s_, e, n = BRAZIL_BBOX
+    box = fused[fused["lat"].between(s_, n) & fused["lon"].between(w, e)]
+    aqua = box.groupby(box["date"].dt.to_period("M")).size()
+    print("Contando focos do S-NPP para a correção da deriva do Aqua ...", flush=True)
+    snpp = _snpp_monthly_counts()
+    ref = CALIBRATION[("Aqua", "SNPP")]
+    factors = drift_factors(aqua, snpp, ref=ref, start="2022-01", window=12)
+    last_day = fused["date"].max()
+    last_month = str(last_day.to_period("M"))
+    scale = partial_month_scale(last_day)
+    rows = add_biome(prediction_features(fused, RISK_RES, last_month, scale, factors, panel), biomes, RISK_RES)
+    prob = positive_proba(model, rows[BASE_FEATURES])
+    target = f"{int(rows['ano_alvo'].iloc[0])}-{int(rows['mes_alvo'].iloc[0]):02d}"
+    val = json.loads((RISK_DIR / "validacao.json").read_text())
+    out = {
+        "target": target, "generated": pd.Timestamp.now(tz="UTC").isoformat(timespec="seconds"),
+        "model": "Random Forest", "train_years": list(final_years),
+        "validation": {"roc_auc_temporal": round(val["temporal_base"]["teste"]["modelo"]["roc_auc"], 3),
+                       "roc_auc_spatial": round(val["espacial_base"]["teste"]["modelo"]["roc_auc"], 3)},
+        "base_rate": round(float(panel.loc[panel["mes_alvo"] == int(rows["mes_alvo"].iloc[0]), "y_critico"].mean()), 3),
+        "data_until": str(last_day.date()), "partial_scale": round(scale, 3),
+        "drift_factor": round(float(factors.get(pd.Period(last_month, "M"), 1.0)), 3),
+        "cells": {f"{cy},{cx}": round(float(p), 3) for cy, cx, p in zip(rows["cy"], rows["cx"], prob)},
+    }
+    dest = Path(__file__).resolve().parent.parent / "web" / "tools" / "previsao_modelo.json"
+    tmp = dest.with_name(dest.name + ".tmp")
+    tmp.write_text(json.dumps(out, separators=(",", ":")), encoding="utf-8")
+    tmp.replace(dest)
+    print(f"{dest}: previsão para {target} | {len(prob):,} células | dados até {last_day.date()} "
+          f"(escala do mês incompleto {scale:.2f}) | fator de deriva {out['drift_factor']}")
+    print("Fatores de deriva (últimos 6 meses):", factors.tail(6).round(3).to_dict())
+    print("Probabilidade de mês crítico:", pd.Series(prob).describe(percentiles=[.5, .75, .9]).round(3).to_dict())
+
+
+RISK_COMMANDS = ["risk-panel", "risk-drivers", "risk-train", "risk-explain", "risk-climatology", "risk-forecast"]
 
 
 def _save_parquet_atomic(df: pd.DataFrame, dest) -> None:
@@ -385,7 +446,7 @@ def main(argv=None):
            "frp-prepare": cmd_frp_prepare, "frp-match": cmd_frp_match,
            "frp-calibrate": cmd_frp_calibrate, "frp-fuse": cmd_frp_fuse,
            "risk-panel": cmd_risk_panel, "risk-drivers": cmd_risk_drivers, "risk-train": cmd_risk_train, "risk-explain": cmd_risk_explain,
-           "risk-climatology": cmd_risk_climatology}
+           "risk-climatology": cmd_risk_climatology, "risk-forecast": cmd_risk_forecast}
     if a.cmd == "all":
         for f in (cmd_aggregate, cmd_harmonize, cmd_validate):
             f(a)

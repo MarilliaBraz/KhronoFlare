@@ -4,7 +4,7 @@ import pytest
 from firms_harmonize.cli import _save_parquet_atomic, main
 
 
-@pytest.mark.parametrize("cmd", ["risk-panel", "risk-drivers", "risk-train", "risk-explain", "risk-climatology"])
+@pytest.mark.parametrize("cmd", ["risk-panel", "risk-drivers", "risk-train", "risk-explain", "risk-climatology", "risk-forecast"])
 @pytest.mark.parametrize("opt", [["--res", "1.0"], ["--min-conf", "high"]])
 def test_risk_commands_reject_options_they_would_ignore(cmd, opt):
     with pytest.raises(SystemExit) as e:
