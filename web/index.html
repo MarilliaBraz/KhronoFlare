@@ -20,6 +20,11 @@
       <button class="lang" data-lang="pt" aria-pressed="false" lang="pt-BR" data-i18n-attr="aria-label:lang.pt"><svg class="flag" viewBox="0 0 20 14" aria-hidden="true"><rect width="20" height="14" rx="2" fill="#009c3b"/><path d="M10 1.6L18.2 7L10 12.4L1.8 7Z" fill="#ffdf00"/><circle cx="10" cy="7" r="3.1" fill="#002776"/><path d="M7.1 6.2a6 6 0 0 1 5.8 1.3" stroke="#fff" stroke-width=".7" fill="none"/></svg><span aria-hidden="true">PT</span></button>
       <button class="lang" data-lang="en" aria-pressed="true" lang="en" data-i18n-attr="aria-label:lang.en"><svg class="flag" viewBox="0 0 20 14" aria-hidden="true"><clipPath id="fus"><rect width="20" height="14" rx="2"/></clipPath><g clip-path="url(#fus)"><rect width="20" height="14" fill="#fff"/><path d="M0 0h20M0 2.15h20M0 4.3h20M0 6.45h20M0 8.6h20M0 10.75h20M0 12.9h20" stroke="#b22234" stroke-width="1.08" transform="translate(0 .54)"/><rect width="8.6" height="7.54" fill="#3c3b6e"/></g></svg><span aria-hidden="true">EN</span></button>
     </div>
+    <div class="a11y" role="group" data-i18n-attr="aria-label:a11y.group" aria-label="Display">
+      <button class="a11y-btn" id="fs-down" data-i18n-attr="aria-label:a11y.smaller" aria-label="Smaller text"><span aria-hidden="true">A−</span></button>
+      <button class="a11y-btn" id="fs-up" data-i18n-attr="aria-label:a11y.larger" aria-label="Larger text"><span aria-hidden="true">A+</span></button>
+      <button class="a11y-btn" id="contrast" aria-pressed="false" data-i18n-attr="aria-label:a11y.contrast" aria-label="High contrast"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13Z" fill="currentColor"/></svg></button>
+    </div>
     <button class="btn sm" id="howto" data-i18n="howto">How it works</button>
     <label for="juris" data-i18n="your-area">Your area</label>
     <select id="juris"></select>
@@ -110,7 +115,7 @@
   <div class="pane" id="pane-log" role="tabpanel" aria-labelledby="tab-log" hidden>
     <ul class="log" id="log"></ul>
     <details class="cap" id="capbox" hidden><summary data-i18n="cap.summary">CAP 1.2 export of the last alert</summary>
-      <div class="actions" style="margin:8px 0"><button class="btn sm" id="copycap" data-i18n="cap.copy">Copy CAP XML</button><span id="copied" style="font-size:12px;color:var(--muted)"></span></div>
+      <div class="actions cap-actions"><button class="btn sm" id="copycap" data-i18n="cap.copy">Copy CAP XML</button><span id="copied" class="hint"></span></div>
       <pre id="capxml"></pre></details>
   </div>
 </section>
@@ -120,6 +125,7 @@
   <p data-i18n-html="foot.2">Data: NASA FIRMS near-real-time sample (Terra/Aqua MODIS, NOAA-20 VIIRS) and IBGE boundaries. The priority score is provisional; harmonized intensity and how unusual each fire is will come from <code>firms_harmonize</code>.</p></footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="i18n.js"></script>
+<script src="prefs.js"></script>
 <script src="ntfy.js"></script>
 <script src="app.js"></script>
 </body>

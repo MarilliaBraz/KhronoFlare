@@ -266,8 +266,8 @@ function main(D) {
     return `<div><span class="eyebrow">${t('sheet.review')}</span><h2 id="sheet-h">${t('sheet.review.h',{name:esc(c.name), uf:c.uf})}</h2></div>
       <div>${t('sheet.review.sum',{level:lv, a:fmtInt(areaOf(c,it)), h:it.hours, uf:c.uf})}</div>
       <div class="msgbox">${esc(msgOf(c,it))}</div>${checksHtml(cs)}
-      <label style="display:flex;gap:8px;font-size:13px"><input type="checkbox" id="ack-who"> ${t('sheet.ack-who')}</label>
-      ${warn?`<label style="display:flex;gap:8px;font-size:13px"><input type="checkbox" id="ack-warn"> ${t('sheet.ack-warn')}</label>`:''}
+      <label class="ack"><input type="checkbox" id="ack-who"> ${t('sheet.ack-who')}</label>
+      ${warn?`<label class="ack"><input type="checkbox" id="ack-warn"> ${t('sheet.ack-warn')}</label>`:''}
       <div class="actions"><button class="btn danger" data-sa="approve" disabled>${t('sheet.approve')}</button><button class="btn" data-sa="return">${t('sheet.return')}</button><button class="btn" data-sa="close">${t('sheet.close')}</button></div>`;
   }
   function cancelHtml(c){
