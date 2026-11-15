@@ -4,40 +4,45 @@ img{max-width:100%}
 [hidden]{display:none!important}
 body{margin:0}
 /* Layout: operations console. Queue | map | case file, with the simulated phone and audit log below. */
+/* Tokens: night-shift operations room. Fire colors (ember/flame) only mean fire and risk; signal blue only means "you can act". */
 :root{
-  --bg:#eef2f0; --panel:#ffffff; --sunk:#f6f8f7; --line:#d6ddd9; --ink:#15201c; --muted:#5a6863;
-  --accent:#0d6b5b; --accent-ink:#ffffff; --accent-soft:#dcefe9;
-  --extreme:#b8231a; --extreme-soft:#f8e1de; --severe:#b45f00; --severe-soft:#fbecd7; --watch:#61716b; --watch-soft:#e7ecea;
-  --ok:#1f7a45; --ok-soft:#ddf1e4;
-  --land:#e3e9e6; --land-line:#b4c0bb; --mun:#fdfefd; --sea:#f7f9f8; --outside:#a6b1ad;
-  --f1:#e3a63a; --f2:#dc6a22; --f3:#b8231a;
-  --phone-bg:#1b2420; --phone-wall:#2e3e38;
-  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --font-head:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
-  --font-data:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --bg:#eef1f3; --panel:#ffffff; --sunk:#f5f7f8; --line:#d5dce0; --ink:#141b20; --muted:#56646d;
+  --accent:#1f63d6; --accent-ink:#ffffff; --accent-soft:#e1ecfd;
+  --extreme:#b5311a; --extreme-soft:#fbe4dc; --severe:#9a5700; --severe-soft:#fbefd9; --watch:#5f6d75; --watch-soft:#e8edf0;
+  --ok:#1d7342; --ok-soft:#ddf1e4;
+  --land:#e2e7ea; --land-line:#b3bec4; --mun:#fdfefe; --sea:#f4f6f7; --outside:#a5b0b6;
+  --f1:#f2b233; --f2:#dc5f17; --f3:#a3170c;
+  --phone-bg:#161b1f; --phone-wall:#2a333a;
+  --font-ui:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-head:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --font-data:"Archivo",system-ui,sans-serif;
+  --font-code:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --head-width:82%;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0e1412; --panel:#151d1a; --sunk:#111816; --line:#26332e; --ink:#e4ece8; --muted:#92a29b;
-  --accent:#4cc2a6; --accent-ink:#06211b; --accent-soft:#163a32;
-  --extreme:#ff6b5e; --extreme-soft:#3d1a17; --severe:#f2a641; --severe-soft:#3a2a12; --watch:#9aaaa3; --watch-soft:#222c29;
-  --ok:#5fd18f; --ok-soft:#143322;
-  --land:#1c2623; --land-line:#3b4a44; --mun:#24302c; --sea:#121a17; --outside:#4d5a55;
-  --f1:#f0b54a; --f2:#f2843a; --f3:#ff5a4c;
-  --phone-bg:#050807; --phone-wall:#22302b; color-scheme:dark}}
+  --bg:#12171b; --panel:#1a2126; --sunk:#151b1f; --line:#323c43; --ink:#e8edf0; --muted:#95a3ab;
+  --accent:#5b9dff; --accent-ink:#071526; --accent-soft:#17294a;
+  --extreme:#ff6a3d; --extreme-soft:#3d1d14; --severe:#ffb547; --severe-soft:#3a2c14; --watch:#9aa8b0; --watch-soft:#232c32;
+  --ok:#4fd18b; --ok-soft:#12301f;
+  --land:#1f272c; --land-line:#3a464d; --mun:#283239; --sea:#0f1417; --outside:#4a555c;
+  --f1:#ffe17a; --f2:#ff8f3a; --f3:#f0362a;
+  --phone-bg:#05080a; --phone-wall:#232c33; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0e1412; --panel:#151d1a; --sunk:#111816; --line:#26332e; --ink:#e4ece8; --muted:#92a29b;
-  --accent:#4cc2a6; --accent-ink:#06211b; --accent-soft:#163a32;
-  --extreme:#ff6b5e; --extreme-soft:#3d1a17; --severe:#f2a641; --severe-soft:#3a2a12; --watch:#9aaaa3; --watch-soft:#222c29;
-  --ok:#5fd18f; --ok-soft:#143322;
-  --land:#1c2623; --land-line:#3b4a44; --mun:#24302c; --sea:#121a17; --outside:#4d5a55;
-  --f1:#f0b54a; --f2:#f2843a; --f3:#ff5a4c;
-  --phone-bg:#050807; --phone-wall:#22302b; color-scheme:dark}
+  --bg:#12171b; --panel:#1a2126; --sunk:#151b1f; --line:#323c43; --ink:#e8edf0; --muted:#95a3ab;
+  --accent:#5b9dff; --accent-ink:#071526; --accent-soft:#17294a;
+  --extreme:#ff6a3d; --extreme-soft:#3d1d14; --severe:#ffb547; --severe-soft:#3a2c14; --watch:#9aa8b0; --watch-soft:#232c32;
+  --ok:#4fd18b; --ok-soft:#12301f;
+  --land:#1f272c; --land-line:#3a464d; --mun:#283239; --sea:#0f1417; --outside:#4a555c;
+  --f1:#ffe17a; --f2:#ff8f3a; --f3:#f0362a;
+  --phone-bg:#05080a; --phone-wall:#232c33; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.45;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 32px}
-h1,h2,h3{font-family:var(--font-head);text-wrap:balance;margin:0;letter-spacing:.005em}
+h1,h2,h3{font-family:var(--font-head);font-stretch:var(--head-width);text-wrap:balance;margin:0;letter-spacing:0}
+.qname,.maptitle,.case-h{font-stretch:var(--head-width)}
 button,select,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+body{font-variant-numeric:tabular-nums}
 .num{font-family:var(--font-data);font-variant-numeric:tabular-nums}
 .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
 
@@ -153,14 +158,14 @@ table.det{width:100%;border-collapse:collapse;font-size:12px}
 .pop .tri::after{content:"!";position:absolute;inset:4px 0 0;color:#fff;font-size:12px;font-weight:800;text-align:center}
 .pop .pb{font-size:12.5px;line-height:1.38;margin:8px 0 8px;max-height:230px;overflow:auto}
 .pop .pf{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e3e3e3;padding-top:8px;font-size:10.5px;color:#666}
-.pop .pf button{border:0;background:none;color:#0d6b5b;font-weight:700;cursor:pointer;font-size:13px}
+.pop .pf button{border:0;background:none;color:#1f63d6;font-weight:700;cursor:pointer;font-size:13px}
 .phonecap{font-size:12px;color:var(--muted);text-align:center;max-width:260px}
 .log{list-style:none;margin:0;padding:0 14px 14px;display:grid;gap:0;max-height:330px;overflow:auto}
 .log li{display:grid;grid-template-columns:76px 86px 1fr;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}
 .log .t{font-family:var(--font-data);color:var(--muted)}
 .log .r{font-weight:600}
 details.cap{margin:0 14px 14px;font-size:12.5px}
-details.cap pre{overflow:auto;max-height:220px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:var(--font-data);font-size:11.5px}
+details.cap pre{overflow:auto;max-height:220px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:var(--font-code);font-size:11.5px}
 /* guide */
 .guide{list-style:none;max-width:1440px;margin:0 auto 12px;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .guide li{display:flex;gap:9px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;color:var(--muted);min-width:0}
@@ -257,5 +262,5 @@ details.more[open]>*:not(summary){margin-top:10px}
 details.cap{margin:12px 0 0}
 .howto{margin:0;padding-left:20px;display:grid;gap:8px;font-size:14px}
 .rp-left{display:grid;gap:10px;justify-items:center}
-.rp-input{flex:1 1 220px;min-width:0;background:var(--sunk);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-family:var(--font-data);font-size:12.5px}
-.rp-status code{font-family:var(--font-data)}
+.rp-input{flex:1 1 220px;min-width:0;background:var(--sunk);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-family:var(--font-code);font-size:12.5px}
+.rp-status code{font-family:var(--font-code)}
