@@ -26,14 +26,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Malhas municipais do IBGE (guardadas entre execuções)
-        uses: actions/cache@v4
-        with:
-          path: .cache/ibge
-          key: ibge-malhas-minima-v1
-
+      # As malhas do IBGE ficam no repositório: o servidor do IBGE não responde às máquinas do GitHub (fora do Brasil).
       - name: Baixar e processar o FIRMS
-        run: python3 -I web/tools/build_live.py web/data.json --cache .cache/ibge
+        run: python3 -I web/tools/build_live.py web/data.json --cache web/tools/ibge-malhas
 
       - name: Gravar no repositório se mudou
         run: |
