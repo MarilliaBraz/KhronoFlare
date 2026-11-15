@@ -196,7 +196,7 @@ details.cap pre{overflow:auto;max-height:220px;background:var(--sunk);border:1px
 .steps li.done{border-color:var(--accent);color:var(--ink)}
 .steps li.now{border-color:var(--severe);color:var(--ink);font-weight:600}
 /* review sheet */
-.sheet{position:fixed;inset:0;z-index:50;background:rgba(10,16,14,.55);display:grid;place-items:center;
+.sheet{position:fixed;inset:0;z-index:5000;background:rgba(10,16,14,.55);display:grid;place-items:center;
   padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .sheet .dlg{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(560px,100%);max-height:100%;overflow:auto;padding:18px;display:grid;gap:12px}
 .sheet h2{font-size:calc(19px * var(--fs))}
@@ -456,3 +456,22 @@ details.cap{margin:12px 0 0}
   .leaflet-container .leaflet-control-attribution{font-size:9.5px;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .place .nm{font-size:11px} .place.capital .nm{font-size:12px} .region span{font-size:15px}
 }
+
+/* ===== live data badge and evidence ===== */
+.livebadge{display:inline-flex;align-items:center;gap:8px;min-height:32px;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-weight:600;font-size:calc(12.5px * var(--fs));cursor:pointer}
+.livebadge:hover{border-color:var(--ink)}
+.lb-dot,.ev-dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
+.livebadge[data-state="live"] .lb-dot,.ev-dot[data-state="live"]{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 30%,transparent);animation:pulse 1.6s infinite}
+.livebadge[data-state="delayed"] .lb-dot,.ev-dot[data-state="delayed"]{background:var(--severe)}
+.livebadge[data-state="error"] .lb-dot,.ev-dot[data-state="error"]{background:var(--extreme)}
+.ev-dot[data-state="sample"]{background:var(--watch)}
+.livebadge[data-state="live"]{border-color:color-mix(in srgb,var(--ok) 55%,var(--line))}
+.ev{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.ev h3{display:flex;align-items:center;gap:8px;font-size:calc(15px * var(--fs));margin:0}
+.ev a{color:var(--accent);overflow-wrap:anywhere}
+.ev-list,.ev-files{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:calc(12.5px * var(--fs))}
+.ev-files{display:grid}
+.leaflet-div-icon.live-pulse{background:none;border:0;pointer-events:none}
+.live-pulse span{display:block;width:22px;height:22px;border-radius:50%;border:2px solid #ff3b1f;animation:ring 1.8s ease-out infinite}
+@keyframes ring{from{transform:scale(.35);opacity:1}to{transform:scale(1.1);opacity:0}}
+@media (prefers-reduced-motion:reduce){.live-pulse span{animation:none;transform:scale(.8);opacity:.8}}

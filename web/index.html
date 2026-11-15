@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://gibs.earthdata.nasa.gov; connect-src 'self' https://ntfy.sh; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://gibs.earthdata.nasa.gov; connect-src 'self' https://ntfy.sh https://dataserver-coids.inpe.br; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hotspot Alert Console</title>
@@ -15,8 +15,9 @@
 <header class="top">
   <div class="brand"><span class="mark" aria-hidden="true"></span>
     <div><h1 data-i18n="title">Hotspot Alert Console</h1>
-      <p data-i18n="subtitle">Real NASA FIRMS detections from 12 Nov 2026. Alerts are simulated.</p></div></div>
+      <p data-i18n="subtitle">Live fire detections from INPE, fire intensity from NASA FIRMS. Alerts are simulated.</p></div></div>
   <div class="who">
+    <button class="livebadge" id="livebadge" data-state="loading" aria-haspopup="dialog"><span class="lb-dot" aria-hidden="true"></span><span class="lb-text">Connecting to INPE…</span></button>
     <div class="langs" role="group" data-i18n-attr="aria-label:lang.group" aria-label="Language">
       <button class="lang" data-lang="pt" aria-pressed="false" lang="pt-BR" data-i18n-attr="aria-label:lang.pt"><svg class="flag" viewBox="0 0 20 14" aria-hidden="true"><rect width="20" height="14" rx="2" fill="#009c3b"/><path d="M10 1.6L18.2 7L10 12.4L1.8 7Z" fill="#ffdf00"/><circle cx="10" cy="7" r="3.1" fill="#002776"/><path d="M7.1 6.2a6 6 0 0 1 5.8 1.3" stroke="#fff" stroke-width=".7" fill="none"/></svg><span aria-hidden="true">PT</span></button>
       <button class="lang" data-lang="en" aria-pressed="true" lang="en" data-i18n-attr="aria-label:lang.en"><svg class="flag" viewBox="0 0 20 14" aria-hidden="true"><clipPath id="fus"><rect width="20" height="14" rx="2"/></clipPath><g clip-path="url(#fus)"><rect width="20" height="14" fill="#fff"/><path d="M0 0h20M0 2.15h20M0 4.3h20M0 6.45h20M0 8.6h20M0 10.75h20M0 12.9h20" stroke="#b22234" stroke-width="1.08" transform="translate(0 .54)"/><rect width="8.6" height="7.54" fill="#3c3b6e"/></g></svg><span aria-hidden="true">EN</span></button>
@@ -49,7 +50,7 @@
       <div class="maptools">
         <button class="btn sm" id="zoom-out" data-i18n="map.zoomout">All of Brazil</button>
         <div class="basemaps" role="group" aria-label="Map background" data-i18n-attr="aria-label:base.group">
-          <button data-base="sat" aria-pressed="true" data-i18n="base.sat">Satellite, 12 Nov</button>
+          <button data-base="sat" aria-pressed="true">Satellite</button>
           <button data-base="relief" aria-pressed="false" data-i18n="base.relief">Relief</button>
           <button data-base="night" aria-pressed="false" data-i18n="base.night">Night lights</button>
         </div>
@@ -59,6 +60,7 @@
         <span class="lg"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="var(--f2)"/></svg>VIIRS</span>
         <span class="lg"><svg width="12" height="12" aria-hidden="true"><path d="M6 1L11 6L6 11L1 6Z" fill="var(--f2)"/></svg>MODIS</span>
         <span class="lg"><svg width="40" height="10" aria-hidden="true"><rect width="13" height="10" fill="var(--f1)"/><rect x="13" width="13" height="10" fill="var(--f2)"/><rect x="26" width="14" height="10" fill="var(--f3)"/></svg><span data-i18n="legend.intensity">Fire intensity</span></span>
+        <span class="lg"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="#ff3b1f" stroke="#fff" stroke-width="1.2"/></svg><span data-i18n="legend.live">Live (INPE, last 3 h)</span></span>
       </div></div>
     <p class="mapbar" id="mapstats"></p>
   </section>
@@ -136,6 +138,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="i18n.js"></script>
 <script src="prefs.js"></script>
+<script src="live.js"></script>
 <script src="ntfy.js"></script>
 <script src="app.js"></script>
 </body>
