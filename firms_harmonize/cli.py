@@ -15,12 +15,14 @@
     python -m firms_harmonize risk-drivers    # risco: ONI, TNA (NOAA) e bioma (IBGE) no painel
     python -m firms_harmonize risk-train      # risco: Random Forest, validação temporal e espacial
     python -m firms_harmonize risk-explain    # risco: importância das variáveis (permutação agrupada)
+    python -m firms_harmonize risk-climatology  # risco: fogo por célula e mês do ano → web/tools/climatologia.json
 """
 from __future__ import annotations
 
 import argparse
 import json
 import re
+from pathlib import Path
 
 import pandas as pd
 
@@ -330,7 +332,20 @@ def cmd_risk_explain(args):
     print(impureza.head(8).round(3).to_string())
 
 
-RISK_COMMANDS = ["risk-panel", "risk-drivers", "risk-train", "risk-explain"]
+def cmd_risk_climatology(args):
+    from .config import RISK_DIR, RISK_RES
+    from .risk.climatology import monthly_climatology
+    panel = pd.read_parquet(RISK_DIR / "panel.parquet", columns=["cy", "cx", "mes_alvo", "ano_alvo", "alvo_n"])
+    clim = monthly_climatology(panel, RISK_RES)
+    dest = Path(__file__).resolve().parent.parent / "web" / "tools" / "climatologia.json"
+    tmp = dest.with_name(dest.name + ".tmp")
+    tmp.write_text(json.dumps(clim, separators=(",", ":")), encoding="utf-8")
+    tmp.replace(dest)
+    print(f"{dest}: {len(clim['cells']):,} células com fogo, anos-alvo {clim['years'][0]}–{clim['years'][1]} "
+          f"({clim['n_years']} anos), {dest.stat().st_size / 1024:.0f} KB")
+
+
+RISK_COMMANDS = ["risk-panel", "risk-drivers", "risk-train", "risk-explain", "risk-climatology"]
 
 
 def _save_parquet_atomic(df: pd.DataFrame, dest) -> None:
@@ -369,7 +384,8 @@ def main(argv=None):
            "aggregate": cmd_aggregate, "harmonize": cmd_harmonize, "validate": cmd_validate,
            "frp-prepare": cmd_frp_prepare, "frp-match": cmd_frp_match,
            "frp-calibrate": cmd_frp_calibrate, "frp-fuse": cmd_frp_fuse,
-           "risk-panel": cmd_risk_panel, "risk-drivers": cmd_risk_drivers, "risk-train": cmd_risk_train, "risk-explain": cmd_risk_explain}
+           "risk-panel": cmd_risk_panel, "risk-drivers": cmd_risk_drivers, "risk-train": cmd_risk_train, "risk-explain": cmd_risk_explain,
+           "risk-climatology": cmd_risk_climatology}
     if a.cmd == "all":
         for f in (cmd_aggregate, cmd_harmonize, cmd_validate):
             f(a)

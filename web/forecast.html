@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en" data-i18n-title="fc.title">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://gibs.earthdata.nasa.gov; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Next-Month Fire Outlook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true"></span>
+    <div><h1 data-i18n="fc.title">Next-Month Fire Outlook</h1>
+      <p data-i18n="fc.subtitle">For civil protection planning: where fire tends to appear next month, and where it is burning now.</p></div></div>
+  <div class="who">
+    <a class="btn sm" href="index.html" data-i18n="fc.back">Live alert console</a>
+    <div class="langs" role="group" data-i18n-attr="aria-label:lang.group" aria-label="Language">
+      <button class="lang" data-lang="pt" aria-pressed="false" lang="pt-BR" data-i18n-attr="aria-label:lang.pt"><svg class="flag" viewBox="0 0 20 14" aria-hidden="true"><rect width="20" height="14" rx="2" fill="#009c3b"/><path d="M10 1.6L18.2 7L10 12.4L1.8 7Z" fill="#ffdf00"/><circle cx="10" cy="7" r="3.1" fill="#002776"/><path d="M7.1 6.2a6 6 0 0 1 5.8 1.3" stroke="#fff" stroke-width=".7" fill="none"/></svg><span aria-hidden="true">PT</span></button>
+      <button class="lang" data-lang="en" aria-pressed="true" lang="en" data-i18n-attr="aria-label:lang.en"><svg class="flag" viewBox="0 0 20 14" aria-hidden="true"><clipPath id="fus"><rect width="20" height="14" rx="2"/></clipPath><g clip-path="url(#fus)"><rect width="20" height="14" fill="#fff"/><path d="M0 0h20M0 2.15h20M0 4.3h20M0 6.45h20M0 8.6h20M0 10.75h20M0 12.9h20" stroke="#b22234" stroke-width="1.08" transform="translate(0 .54)"/><rect width="8.6" height="7.54" fill="#3c3b6e"/></g></svg><span aria-hidden="true">EN</span></button>
+    </div>
+    <div class="a11y" role="group" data-i18n-attr="aria-label:a11y.group" aria-label="Display">
+      <button class="a11y-btn" id="fs-down" data-i18n-attr="aria-label:a11y.smaller" aria-label="Smaller text"><span aria-hidden="true">A−</span></button>
+      <button class="a11y-btn" id="fs-up" data-i18n-attr="aria-label:a11y.larger" aria-label="Larger text"><span aria-hidden="true">A+</span></button>
+      <button class="a11y-btn" id="contrast" aria-pressed="false" data-i18n-attr="aria-label:a11y.contrast" aria-label="High contrast"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13Z" fill="currentColor"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<div class="fc-banner" id="fc-banner" role="status">
+  <p class="fc-kind" id="fc-kind">Loading the outlook…</p>
+  <details class="fc-how"><summary data-i18n="fc.how">How this is calculated</summary><div id="fc-rule"></div></details>
+</div>
+
+<main class="fc-grid">
+  <section class="panel" aria-labelledby="fc-map-h">
+    <h2 id="fc-map-h" class="vh" data-i18n="map.h">Map</h2>
+    <div class="mapwrap"><div class="maptitle" id="fc-maptitle"></div>
+      <div id="map" role="region" aria-label="Map of next-month fire outlook" data-i18n-attr="aria-label:fc.map.aria"></div>
+      <div class="maptools"><button class="btn sm" id="zoom-out" data-i18n="map.zoomout">All of Brazil</button></div>
+      <p class="mapnote" id="mapnote" hidden data-i18n="base.offline">Live NASA imagery is not loading. Showing the stored relief map.</p>
+      <div class="legend">
+        <span class="lg"><span class="fc-sw" data-cls="high" aria-hidden="true"></span><span data-i18n="fc.cls.high">High</span></span>
+        <span class="lg"><span class="fc-sw" data-cls="medium" aria-hidden="true"></span><span data-i18n="fc.cls.medium">Medium</span></span>
+        <span class="lg"><span class="fc-sw fc-sw-active" aria-hidden="true"></span><span data-i18n="fc.legend.active">Burning now (≥ 3 hotspots)</span></span>
+      </div></div>
+    <p class="mapbar" id="fc-stats"></p>
+  </section>
+
+  <section class="panel fc-side" aria-labelledby="fc-list-h">
+    <div class="phead"><h2 id="fc-list-h" data-i18n="fc.list.h">Priorities</h2>
+      <button class="btn sm" id="fc-csv" data-i18n="fc.csv">Download CSV</button></div>
+    <div class="fc-filters">
+      <label for="fc-uf" data-i18n="fc.state">State</label>
+      <select id="fc-uf"></select>
+      <div class="filters" role="group" data-i18n-attr="aria-label:filter" aria-label="Filter">
+        <button data-c="all" aria-pressed="true"><span data-i18n="filter.all">All</span> <span class="n"></span></button>
+        <button data-c="high" aria-pressed="false"><span data-i18n="fc.cls.high">High</span> <span class="n"></span></button>
+        <button data-c="medium" aria-pressed="false"><span data-i18n="fc.cls.medium">Medium</span> <span class="n"></span></button>
+      </div>
+    </div>
+    <ol class="fc-list" id="fc-list" aria-live="polite"></ol>
+    <button class="btn sm fc-more" id="fc-more" hidden></button>
+  </section>
+</main>
+
+<footer class="foot"><p data-i18n="fc.foot">Prototype for NASA Space Apps 2026. Planning aid only: it shows where fire has been frequent and where it is burning now, not a guarantee of where it will happen.</p></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="forecast-i18n.js"></script>
+<script src="i18n.js"></script>
+<script src="prefs.js"></script>
+<script src="forecast.js"></script>
+</body>
+</html>

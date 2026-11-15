@@ -11,7 +11,7 @@
       'subtitle': 'Live fire detections from INPE, fire intensity from NASA FIRMS. Alerts are simulated.',
       'lang.group': 'Language',
       'lang.en': 'English', 'lang.pt': 'Português',
-      'howto': 'How it works',
+      'howto': 'How it works', 'fc.open': 'Next-month outlook',
       'a11y.group': 'Display', 'a11y.smaller': 'Smaller text', 'a11y.larger': 'Larger text', 'a11y.contrast': 'High contrast', 'a11y.size': 'text size {p}%',
       'your-area': 'Your area',
       'q.h': 'Brazil by state',
@@ -165,7 +165,7 @@
       'subtitle': 'Focos ao vivo do INPE e intensidade do fogo do NASA FIRMS. Os alertas são simulados.',
       'lang.group': 'Idioma',
       'lang.en': 'English', 'lang.pt': 'Português',
-      'howto': 'Como funciona',
+      'howto': 'Como funciona', 'fc.open': 'Previsão do próximo mês',
       'a11y.group': 'Exibição', 'a11y.smaller': 'Diminuir o texto', 'a11y.larger': 'Aumentar o texto', 'a11y.contrast': 'Alto contraste', 'a11y.size': 'texto em {p}%',
       'your-area': 'Sua área',
       'q.h': 'Brasil por estado',
@@ -319,6 +319,8 @@
   const read = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
   const save = v => { try { localStorage.setItem(KEY, v); } catch (e) { /* storage blocked: choice lasts this visit */ } };
 
+  // Pages with their own text (forecast-i18n.js) put it in window.I18N_EXTRA before this file loads.
+  Object.entries(window.I18N_EXTRA || {}).forEach(([code, entries]) => { if (DICT[code]) Object.assign(DICT[code], entries); });
   let lang = DICT[read()] ? read() : 'en';
   const subscribers = [];
 
