@@ -34,14 +34,14 @@
   </section>
 
   <section class="panel" aria-labelledby="m-h">
-    <div class="phead"><h2 id="m-h">Map</h2>
+    <h2 id="m-h" class="vh">Map</h2>
+    <div class="mapwrap"><div class="maptitle" id="maptitle">Brazil</div><svg id="map" role="img" aria-label="Map of fire detections"></svg>
+      <button class="btn sm mapzoom" id="zoom-out">All of Brazil</button>
       <div class="legend">
         <span class="lg"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="var(--f2)"/></svg>VIIRS</span>
         <span class="lg"><svg width="12" height="12" aria-hidden="true"><path d="M6 1L11 6L6 11L1 6Z" fill="var(--f2)"/></svg>MODIS</span>
-        <span class="lg"><svg width="40" height="10" aria-hidden="true"><rect width="13" height="10" fill="var(--f1)"/><rect x="13" width="13" height="10" fill="var(--f2)"/><rect x="26" width="14" height="10" fill="var(--f3)"/></svg>weak → strong fire</span>
+        <span class="lg"><svg width="40" height="10" aria-hidden="true"><rect width="13" height="10" fill="var(--f1)"/><rect x="13" width="13" height="10" fill="var(--f2)"/><rect x="26" width="14" height="10" fill="var(--f3)"/></svg>Fire intensity</span>
       </div></div>
-    <div class="mapwrap"><div class="maptitle" id="maptitle">Brazil</div><svg id="map" role="img" aria-label="Map of fire detections"></svg>
-      <button class="btn sm mapzoom" id="zoom-out">All of Brazil</button></div>
     <p class="mapbar" id="mapstats"></p>
   </section>
 
