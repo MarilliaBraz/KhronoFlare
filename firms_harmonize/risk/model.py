@@ -27,6 +27,16 @@ ONI_FEATURES = [*BASE_FEATURES, "oni_atual", "oni_3m"]
 TARGET = "y_critico"
 MIN_SAMPLES_LEAF = 20
 
+# Grupos para a importância por permutação (passo 5): variáveis correlacionadas são embaralhadas juntas.
+FEATURE_GROUPS = {
+    "historico_recente": ["n_lag0", "n_lag1", "n_lag2", "frp_lag0", "frp_lag1", "frp_lag2"],
+    "ano_anterior_e_12m": ["n_mesmo_mes_ano_ant", "n_12m"],
+    "climatologia": ["p_fogo", "n_med"],
+    "posicao": ["cy", "cx"],
+    "sazonalidade": ["mes_sin", "mes_cos"],
+    "bioma": [f"bioma_{c}" for c in BIOME_CODES],
+}
+
 
 def make_model(n_estimators: int = 200, seed: int = 0) -> RandomForestClassifier:
     return RandomForestClassifier(n_estimators=n_estimators, min_samples_leaf=MIN_SAMPLES_LEAF,
@@ -69,12 +79,19 @@ def _kind(test: pd.DataFrame) -> np.ndarray:
     return np.where(test["frp_p75"].to_numpy() == 0, "fora_de_epoca", "temporada")
 
 
-def temporal_validation(panel: pd.DataFrame, features: list[str], train_years: tuple[int, int],
-                        test_years: tuple[int, int], n_estimators: int = 200, seed: int = 0) -> dict:
+def fit_model(panel: pd.DataFrame, features: list[str], train_years: tuple[int, int],
+              n_estimators: int = 200, seed: int = 0) -> RandomForestClassifier:
+    """Ajusta o Random Forest nos anos-alvo de treino."""
     _check(panel, features)
     tr = panel[panel["ano_alvo"].between(*train_years)]
+    return make_model(n_estimators, seed).fit(tr[features], tr[TARGET])
+
+
+def temporal_validation(panel: pd.DataFrame, features: list[str], train_years: tuple[int, int],
+                        test_years: tuple[int, int], n_estimators: int = 200, seed: int = 0) -> dict:
+    model = fit_model(panel, features, train_years, n_estimators, seed)
+    tr = panel[panel["ano_alvo"].between(*train_years)]
     te = panel[panel["ano_alvo"].between(*test_years)]
-    model = make_model(n_estimators, seed).fit(tr[features], tr[TARGET])
     p = model.predict_proba(te[features])[:, 1]
     y = te[TARGET].to_numpy()
     return {
@@ -135,3 +152,23 @@ def spatial_validation(panel: pd.DataFrame, features: list[str], train_years: tu
                   "referencias": {k: evaluate(y, s) for k, s in _references(te_all).items()}},
         "por_grupo": groups,
     }
+
+
+def grouped_permutation_importance(model: RandomForestClassifier, test: pd.DataFrame, features: list[str],
+                                   groups: dict, n_repeats: int = 5, seed: int = 0) -> pd.DataFrame:
+    """Queda média do ROC-AUC no teste ao embaralhar juntas as colunas de cada grupo (não altera `test`)."""
+    x = test[features].to_numpy(dtype=float)
+    y = test[TARGET].to_numpy()
+    base = roc_auc_score(y, model.predict_proba(pd.DataFrame(x, columns=features))[:, 1])
+    rng = np.random.default_rng(seed)
+    rows = {}
+    for name, cols in groups.items():
+        idx = [features.index(c) for c in cols if c in features]
+        drops = []
+        for _ in range(n_repeats):
+            shuffled = x.copy()
+            shuffled[:, idx] = x[rng.permutation(len(x))][:, idx]
+            auc = roc_auc_score(y, model.predict_proba(pd.DataFrame(shuffled, columns=features))[:, 1])
+            drops.append(base - auc)
+        rows[name] = {"queda_auc": float(np.mean(drops)), "desvio": float(np.std(drops))}
+    return pd.DataFrame(rows).T.sort_values("queda_auc", ascending=False)

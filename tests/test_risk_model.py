@@ -90,3 +90,32 @@ def test_spatial_folds_need_enough_blocks():
     p = _panel(n_cells=3).assign(cy=0, cx=0)          # uma célula só → um bloco
     with pytest.raises(ValueError, match="blocos"):
         spatial_folds(p, block_deg=5.0, res=0.5, n_folds=3)
+
+# ---------- passo 5: importância por permutação agrupada ----------
+
+from firms_harmonize.risk.model import FEATURE_GROUPS, fit_model, grouped_permutation_importance
+
+
+def test_feature_groups_cover_every_base_feature_exactly_once():
+    flat = [f for cols in FEATURE_GROUPS.values() for f in cols]
+    assert sorted(flat) == sorted(BASE_FEATURES)
+
+
+def test_grouped_importance_finds_the_informative_group():
+    p = _panel(n_cells=60)
+    model = fit_model(p, BASE_FEATURES, TRAIN, n_estimators=50)
+    test = p[p["ano_alvo"].between(*TEST)]
+    imp = grouped_permutation_importance(model, test, BASE_FEATURES, FEATURE_GROUPS, n_repeats=3, seed=0)
+    assert imp.index[0] == "historico_recente"                  # onde está n_lag0
+    assert imp.loc["historico_recente", "queda_auc"] > 0.2
+    assert (imp.drop(index="historico_recente")["queda_auc"].abs() < 0.05).all()
+    assert {"queda_auc", "desvio"} <= set(imp.columns)
+
+
+def test_grouped_importance_does_not_modify_the_input():
+    p = _panel(n_cells=30)
+    model = fit_model(p, BASE_FEATURES, TRAIN, n_estimators=10)
+    test = p[p["ano_alvo"].between(*TEST)].copy()
+    before = test.copy()
+    grouped_permutation_importance(model, test, BASE_FEATURES, FEATURE_GROUPS, n_repeats=2, seed=0)
+    pd.testing.assert_frame_equal(test, before)

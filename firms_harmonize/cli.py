@@ -14,6 +14,7 @@
     python -m firms_harmonize risk-panel      # risco: painel célula 0,5° × mês com histórico e alvo de mês crítico
     python -m firms_harmonize risk-drivers    # risco: ONI, TNA (NOAA) e bioma (IBGE) no painel
     python -m firms_harmonize risk-train      # risco: Random Forest, validação temporal e espacial
+    python -m firms_harmonize risk-explain    # risco: importância das variáveis (permutação agrupada)
 """
 from __future__ import annotations
 
@@ -304,11 +305,36 @@ def cmd_risk_train(args):
           .round(3).to_string(index=False))
 
 
+def cmd_risk_explain(args):
+    from .config import RISK_DIR, RISK_TEST_YEARS, RISK_TRAIN_YEARS
+    from .risk.model import BASE_FEATURES, FEATURE_GROUPS, fit_model, grouped_permutation_importance
+    panel = pd.read_parquet(RISK_DIR / "panel.parquet")
+    print("Treinando o modelo principal (sem índice climático) ...", flush=True)
+    model = fit_model(panel, BASE_FEATURES, RISK_TRAIN_YEARS)
+    test = panel[panel["ano_alvo"].between(*RISK_TEST_YEARS)]
+    print("Importância por permutação agrupada no teste (5 repetições) ...", flush=True)
+    grupos = grouped_permutation_importance(model, test, BASE_FEATURES, FEATURE_GROUPS, n_repeats=5)
+    impureza = pd.Series(model.feature_importances_, index=BASE_FEATURES).sort_values(ascending=False)
+    por_bioma = {}
+    for bioma, sub in test.groupby("bioma"):
+        por_bioma[bioma] = grouped_permutation_importance(model, sub, BASE_FEATURES, FEATURE_GROUPS,
+                                                          n_repeats=3)["queda_auc"].round(4).to_dict()
+    out = {"grupos": grupos.round(4).to_dict(orient="index"), "por_bioma": por_bioma,
+           "impureza": impureza.round(4).to_dict()}
+    (RISK_DIR / "importancia.json").write_text(json.dumps(out, indent=2, ensure_ascii=False))
+    print("\nQueda do ROC-AUC ao embaralhar cada grupo (maior = mais importante):")
+    print(grupos.round(4).to_string())
+    print("\nPor bioma (queda do ROC-AUC):")
+    print(pd.DataFrame(por_bioma).round(3).to_string())
+    print("\nImportância por impureza (só referência, enviesada para variáveis contínuas), top 8:")
+    print(impureza.head(8).round(3).to_string())
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="firms_harmonize")
     sub = p.add_subparsers(dest="cmd", required=True)
     for name in ["status", "boundary", "fetch-recent", "aggregate", "harmonize", "validate", "all",
-                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse", "risk-panel", "risk-drivers", "risk-train"]:
+                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse", "risk-panel", "risk-drivers", "risk-train", "risk-explain"]:
         sp = sub.add_parser(name)
         sp.add_argument("--res", type=float, default=0.25, help="lado da célula em graus")
         sp.add_argument("--min-conf", default="nominal", choices=["low", "nominal", "high"])
@@ -328,7 +354,7 @@ def main(argv=None):
            "aggregate": cmd_aggregate, "harmonize": cmd_harmonize, "validate": cmd_validate,
            "frp-prepare": cmd_frp_prepare, "frp-match": cmd_frp_match,
            "frp-calibrate": cmd_frp_calibrate, "frp-fuse": cmd_frp_fuse,
-           "risk-panel": cmd_risk_panel, "risk-drivers": cmd_risk_drivers, "risk-train": cmd_risk_train}
+           "risk-panel": cmd_risk_panel, "risk-drivers": cmd_risk_drivers, "risk-train": cmd_risk_train, "risk-explain": cmd_risk_explain}
     if a.cmd == "all":
         for f in (cmd_aggregate, cmd_harmonize, cmd_validate):
             f(a)
