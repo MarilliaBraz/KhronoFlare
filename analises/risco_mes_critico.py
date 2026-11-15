@@ -117,7 +117,7 @@ def mapa(test: pd.DataFrame, mes: pd.Period, destino: Path, auc_teste: float) ->
                  f"ROC-AUC deste mês {_br(m['roc_auc'])} · média do teste 2017–2021 {_br(auc_teste)} "
                  "· mês escolhido pelo maior ΣFRP no mês anterior", color=TEXTO, x=0.01, ha="left", fontsize=12)
     fig.tight_layout()
-    fig.savefig(destino, dpi=150, facecolor=SUPERFICIE)
+    fig.savefig(destino, dpi=150, facecolor=SUPERFICIE, bbox_inches="tight", pad_inches=0.2)
     plt.close(fig)
     return {"mes": str(mes), "criterio": "mês-alvo de pico (ago–out) com maior ΣFRP no mês anterior",
             "celulas": int(len(sel)), "criticas": int(y_mes.sum()), **m}

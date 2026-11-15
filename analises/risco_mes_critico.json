@@ -9,83 +9,84 @@
     2021
   ],
   "mapa": {
-    "mes": "2020-09",
-    "celulas": 2888,
-    "criticas": 860,
-    "n": 2888,
-    "prevalencia": 0.29778393351800553,
-    "roc_auc": 0.7226718384477776,
-    "pr_auc": 0.5181237638912177,
-    "brier": 0.20115028130015844
+    "mes": "2020-10",
+    "criterio": "mês-alvo de pico (ago–out) com maior ΣFRP no mês anterior",
+    "celulas": 2860,
+    "criticas": 817,
+    "n": 2860,
+    "prevalencia": 0.2856643356643357,
+    "roc_auc": 0.7497997460954233,
+    "pr_auc": 0.5296932185411111,
+    "brier": 0.18432716124536203
   },
   "roc_auc_por_bioma": {
     "Brasil": {
-      "Random Forest": 0.708,
-      "Climatologia": 0.619,
-      "Repetir o mês atual": 0.614,
-      "celulas": 2888.0
+      "Random Forest": 0.724,
+      "Climatologia": 0.616,
+      "Repetir o mês atual": 0.612,
+      "celulas": 2860.0
     },
     "Amazônia": {
-      "Random Forest": 0.776,
-      "Climatologia": 0.709,
-      "Repetir o mês atual": 0.652,
-      "celulas": 1337.0
+      "Random Forest": 0.791,
+      "Climatologia": 0.706,
+      "Repetir o mês atual": 0.649,
+      "celulas": 1312.0
     },
     "Caatinga": {
-      "Random Forest": 0.67,
+      "Random Forest": 0.698,
       "Climatologia": 0.569,
       "Repetir o mês atual": 0.583,
       "celulas": 284.0
     },
     "Cerrado": {
-      "Random Forest": 0.592,
+      "Random Forest": 0.615,
       "Climatologia": 0.47,
       "Repetir o mês atual": 0.535,
       "celulas": 684.0
     },
     "Mata Atlântica": {
-      "Random Forest": 0.642,
-      "Climatologia": 0.545,
-      "Repetir o mês atual": 0.588,
-      "celulas": 440.0
+      "Random Forest": 0.652,
+      "Climatologia": 0.543,
+      "Repetir o mês atual": 0.587,
+      "celulas": 438.0
     },
     "Pampa": {
-      "Random Forest": 0.69,
-      "Climatologia": 0.647,
-      "Repetir o mês atual": 0.623,
-      "celulas": 84.0
+      "Random Forest": 0.711,
+      "Climatologia": 0.642,
+      "Repetir o mês atual": 0.622,
+      "celulas": 83.0
     },
     "Pantanal": {
-      "Random Forest": 0.72,
+      "Random Forest": 0.739,
       "Climatologia": 0.554,
       "Repetir o mês atual": 0.684,
       "celulas": 59.0
     }
   },
   "importancia_grupos": {
-    "climatologia": {
-      "queda_auc": 0.1464,
-      "desvio": 0.0015
-    },
     "historico_recente": {
-      "queda_auc": 0.0624,
-      "desvio": 0.0009
+      "queda_auc": 0.122,
+      "desvio": 0.0012
+    },
+    "climatologia": {
+      "queda_auc": 0.0858,
+      "desvio": 0.0006
     },
     "sazonalidade": {
-      "queda_auc": 0.0198,
-      "desvio": 0.0005
-    },
-    "posicao": {
-      "queda_auc": 0.0088,
-      "desvio": 0.0002
+      "queda_auc": 0.0283,
+      "desvio": 0.0006
     },
     "ano_anterior_e_12m": {
-      "queda_auc": 0.0066,
-      "desvio": 0.0005
+      "queda_auc": 0.0253,
+      "desvio": 0.0006
+    },
+    "posicao": {
+      "queda_auc": 0.0151,
+      "desvio": 0.0003
     },
     "bioma": {
-      "queda_auc": 0.0025,
-      "desvio": 0.0001
+      "queda_auc": 0.0066,
+      "desvio": 0.0002
     }
   }
 }
