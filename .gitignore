@@ -1,4 +1,17 @@
-/data/
+# data/ fica fora, exceto as saídas harmonizadas usadas pelo painel (frp_fused via Git LFS)
+/data/*
+!/data/processed/
+/data/processed/*
+!/data/processed/calendar_brasil.csv
+!/data/processed/calendar_brasil_grid.csv
+!/data/processed/harmonized_cells.parquet
+!/data/processed/factors.csv
+!/data/processed/counts_meta.json
+!/data/processed/frp/
+/data/processed/frp/*
+!/data/processed/frp/frp_anual.csv
+!/data/processed/frp/frp_calibration.json
+!/data/processed/frp/frp_fused.parquet
 .env
 *.pyc
 __pycache__/
