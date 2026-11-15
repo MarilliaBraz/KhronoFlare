@@ -144,10 +144,13 @@ function main(D, C) {
     baseLayer.addTo(map).bringToBack();
     document.querySelectorAll('[data-base]').forEach(btn=>btn.setAttribute('aria-pressed', String(btn.dataset.base===key)));
   }
-  // Without imagery (no internet at the demo) the states get a solid fill, so the map still reads.
-  function offline(on){ document.getElementById('mapnote').hidden=!on; document.getElementById('map').classList.toggle('nobase', on);
-    lStates.eachLayer(l=>l.setStyle({fillOpacity:on?1:0})); }
+  // A relief image stored with the page (tools/build_fallback.py) sits under the live imagery,
+  // so the map keeps a realistic background if GIBS fails during a demo.
+  const FALLBACK_BOUNDS = [[-61.6064, -101.25], [31.9522, 0]];
+  function offline(on){ document.getElementById('mapnote').hidden=!on; }
   function buildMap(){
+    map.createPane('fallback'); map.getPane('fallback').style.zIndex = 150;
+    L.imageOverlay('fallback-relief.jpg', FALLBACK_BOUNDS, {pane:'fallback', interactive:false}).addTo(map);
     D.states.forEach(s=>L.polygon(geomLL(s.g), {color:'#ffffff', opacity:.55, weight:1, fillColor:'#1f272c', fillOpacity:0, interactive:false}).addTo(lStates));
     setBase(baseKey);
     map.fitBounds(BRAZIL, {animate:false});
