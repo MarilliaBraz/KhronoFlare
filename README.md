@@ -27,5 +27,8 @@ Baixe-os em https://firms.modaps.eosdis.nasa.gov/download/ e coloque-os na raiz 
 ## Como contribuir
 
 1. Clone: `git clone https://github.com/MarilliaBraz/nasa-space-apps-2026.git`
-2. Crie uma branch: `git checkout -b minha-ideia`
-3. Faça commit e push, depois abra um Pull Request.
+2. Instale as dependências (Python 3.12):
+   `python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt`
+3. Rode os testes: `.venv/bin/python -m pytest -q`
+4. Crie uma branch: `git checkout -b minha-ideia`
+5. Faça commit e push, depois abra um Pull Request.
