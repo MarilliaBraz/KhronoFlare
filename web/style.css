@@ -88,7 +88,7 @@ body{font-variant-numeric:tabular-nums}
 .qlist{list-style:none;margin:0;padding:0 6px 8px;max-height:620px;overflow:auto}
 .qitem{display:grid;grid-template-columns:4px 1fr auto;gap:4px 10px;padding:9px 8px;border-radius:8px;cursor:pointer;border:1px solid transparent}
 .qitem:hover{background:var(--sunk)}
-.qitem[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.qitem[aria-current="true"]{background:var(--accent-soft);border-color:var(--accent)}
 .qitem .stripe{grid-row:1/3;border-radius:3px;background:var(--watch)}
 .qitem.t-high .stripe{background:var(--extreme)} .qitem.t-elev .stripe{background:var(--severe)}
 .qname{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -368,13 +368,13 @@ details.cap{margin:12px 0 0}
   :root:not([data-contrast])[data-theme="dark"]{--bg:#000000; --panel:#000000; --sunk:#000000; --line:#ffffff; --ink:#ffffff; --muted:#ebebeb; --accent:#9cc2ff; --accent-ink:#000000; --accent-soft:#0b2659; --extreme:#ff9c85; --extreme-soft:#3d0c00; --severe:#ffd480; --severe-soft:#332200; --watch:#e6e6e6; --watch-soft:#1f1f1f; --ok:#80f2b4; --ok-soft:#002611; --land:#141414; --land-line:#ffffff; --mun:#000000; --sea:#000000; --outside:#9a9a9a; color-scheme:dark}
 }
 :root[data-contrast="high"] .panel,:root[data-contrast="high"] .btn,:root[data-contrast="high"] .filters button,:root[data-contrast="high"] .qact,:root[data-contrast="high"] .lvl,:root[data-contrast="high"] .radios label,:root[data-contrast="high"] .field select,:root[data-contrast="high"] .field textarea,:root[data-contrast="high"] .msgbox,:root[data-contrast="high"] .legend,:root[data-contrast="high"] .maptitle,:root[data-contrast="high"] .langs,:root[data-contrast="high"] .a11y,:root[data-contrast="high"] .chip,:root[data-contrast="high"] .facts div{border-width:2px;border-style:solid;border-color:var(--line)}
-:root[data-contrast="high"] .qitem[aria-selected="true"]{border-width:2px}
+:root[data-contrast="high"] .qitem[aria-current="true"]{border-width:2px}
 :root[data-contrast="high"] :focus-visible{outline-width:3px;outline-offset:3px}
 :root[data-contrast="high"] .muted,:root[data-contrast="high"] .qmeta,:root[data-contrast="high"] .hint,:root[data-contrast="high"] .note,:root[data-contrast="high"] .mapbar{color:var(--ink)}
 :root[data-contrast="high"] .chip{background:var(--panel)}
 @media (prefers-contrast: more){
 :root:not([data-contrast]) .panel,:root:not([data-contrast]) .btn,:root:not([data-contrast]) .filters button,:root:not([data-contrast]) .qact,:root:not([data-contrast]) .lvl,:root:not([data-contrast]) .radios label,:root:not([data-contrast]) .field select,:root:not([data-contrast]) .field textarea,:root:not([data-contrast]) .msgbox,:root:not([data-contrast]) .legend,:root:not([data-contrast]) .maptitle,:root:not([data-contrast]) .langs,:root:not([data-contrast]) .a11y,:root:not([data-contrast]) .chip,:root:not([data-contrast]) .facts div{border-width:2px;border-style:solid;border-color:var(--line)}
-:root:not([data-contrast]) .qitem[aria-selected="true"]{border-width:2px}
+:root:not([data-contrast]) .qitem[aria-current="true"]{border-width:2px}
 :root:not([data-contrast]) :focus-visible{outline-width:3px;outline-offset:3px}
 :root:not([data-contrast]) .muted,:root:not([data-contrast]) .qmeta,:root:not([data-contrast]) .hint,:root:not([data-contrast]) .note,:root:not([data-contrast]) .mapbar{color:var(--ink)}
 :root:not([data-contrast]) .chip{background:var(--panel)}
@@ -418,3 +418,20 @@ details.cap{margin:12px 0 0}
 .region{display:grid;place-items:center;pointer-events:none}
 .region span{color:rgba(255,255,255,.88);font-family:var(--font-head);font-stretch:var(--head-width);font-weight:700;font-size:calc(17px * var(--fs));letter-spacing:.06em;
   text-shadow:0 0 3px #000,0 0 6px rgba(0,0,0,.8);white-space:nowrap}
+
+/* ===== all states, grouped by region ===== */
+.qlist .qgroup{position:sticky;top:0;z-index:1;background:var(--panel);padding:10px 8px 4px}
+.srow{margin:0 0 2px}
+.sbtn{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:7px 8px 7px 26px;cursor:pointer;position:relative;color:var(--ink)}
+.sbtn::before{content:"";position:absolute;left:9px;top:13px;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s}
+.sbtn[aria-expanded="true"]::before{transform:rotate(45deg);top:11px}
+.sbtn:hover{background:var(--sunk)}
+.sname{font-weight:600;font-size:calc(14.5px * var(--fs));font-stretch:var(--head-width)}
+.sname .uf{color:var(--muted);font-weight:500}
+.you{font-size:calc(11px * var(--fs));font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 7px;margin-left:4px;vertical-align:1px;font-stretch:100%}
+.smeta{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:calc(12px * var(--fs));color:var(--muted)}
+.srow .tier{font-weight:600;color:var(--watch)}
+.srow.t-high .tier{color:var(--extreme)} .srow.t-elev .tier{color:var(--severe)}
+.srow.calm .sname{color:var(--muted);font-weight:500}
+.srow.mine .sbtn{border-color:var(--line)}
+.sgroup>ul{list-style:none;margin:0 0 6px 14px;padding:0 0 0 6px;border-left:2px solid var(--line)}

@@ -4,7 +4,7 @@
 
 function main(D, C) {
   const CITIES = C ? C.cities : [];   // [ibge_id, name, uf, lat, lon, capital]; empty if cities.json failed
-  const S = {role:'analyst', juris:'PA', filter:'all', sel:null, sound:true, items:{}, log:[], lastCap:null, phone:null, open:{}, phonecap:['phone.none',{}]};
+  const S = {role:'analyst', juris:'PA', filter:'all', sel:null, sound:true, items:{}, log:[], lastCap:null, phone:null, open:{}, phonecap:['phone.none',{}], expanded:new Set(['PA'])};
   const BRT = -3;
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const t = (k, v) => I18N.t(k, v);
@@ -88,24 +88,51 @@ function main(D, C) {
   function isOpen(s){ return s==='new'||s==='draft'||s==='pending'; }
   function isAlert(s){ return s==='pending'||s==='sent'||s==='cancelled'; }
   function visible(){ return D.cands.filter(c=>{ const s=item(c.id).status; if(S.filter==='open') return isOpen(s) && (s!=='new' || c.uf===S.juris); if(S.filter==='active') return isAlert(s); return true; }); }
+  /* All 27 states, grouped by region. A state opens to show its municipalities with fire;
+     states without fire are listed too, so the analyst sees the whole country. */
+  const REGION_ORDER = ['North','Northeast','Central-West','Southeast','South'];
+  const STATES = (C ? C.states : D.states.map(s=>({uf:s.uf, name:s.uf, region:'North'})));
+  const stateGeom = Object.fromEntries(D.states.map(s=>[s.uf, s.g]));
+  const TIER_RANK = {high:3, elev:2, watch:1};
+  const firesTxt = n => t(n>1?'q.fires.n':'q.fires.1',{n:fmtInt(n)});
+  function stateSummary(uf){
+    const cs = D.cands.filter(c=>c.uf===uf);
+    const fires = D.points.filter(p=>p.uf===uf).length;
+    const top = cs.reduce((m,c)=> TIER_RANK[c.tier] > (TIER_RANK[m]||0) ? c.tier : m, null);
+    return {cs, fires, top};
+  }
   function renderQueue(){
     const n={all:D.cands.length, open:0, active:0};
     D.cands.forEach(c=>{ const s=item(c.id).status; if(isOpen(s) && (s!=='new' || c.uf===S.juris)) n.open++; if(isAlert(s)) n.active++; });
     document.querySelectorAll('.filters button').forEach(b=>{ const e=b.querySelector('.n'); if(e) e.textContent=n[b.dataset.f]; });
-    const list=visible(), mine=list.filter(c=>c.uf===S.juris), others=list.filter(c=>c.uf!==S.juris);
+    const shown = new Set(visible().map(c=>c.id));
     const row = c=>{
       const it=item(c.id), ra=rowAction(c,it);
       const btn = ra ? `<button class="qact ${ra[2]}" data-qa="${ra[0]}" aria-label="${ra[1]} ${esc(c.name)}">${ra[1]}</button>` : '';
       const chip = it.status==='new' ? '' : ' '+statusChip(it.status);
-      return `<li class="qitem t-${c.tier}" role="option" tabindex="0" data-id="${c.id}" aria-selected="${S.sel===c.id}">
-        <span class="stripe"></span><span class="qname">${esc(c.name)} <span class="uf">${c.uf}</span></span>${btn}
+      return `<li class="qitem t-${c.tier}" role="button" tabindex="0" data-id="${c.id}" aria-current="${S.sel===c.id}">
+        <span class="stripe"></span><span class="qname">${esc(c.name)}</span>${btn}
         <span class="qmeta"><span class="tier">${tierName(c.tier)}</span><span class="num">${t(c.n>1?'q.fires.n':'q.fires.1',{n:c.n})}</span><span class="num">${t('q.max',{v:fmt1(c.frpMax)})}</span>${chip}</span></li>`;
     };
-    const group = (title, cs) => cs.length ? `<li class="qgroup" role="presentation">${title}</li>${cs.map(row).join('')}` : '';
-    document.getElementById('queue').innerHTML =
-      (group(t('q.mine',{uf:S.juris}), mine) + group(t('q.others'), others))
-      || `<li class="empty">${t(S.filter==='open'?'q.empty.open':'q.empty.active')}</li>`;
+    const stateRow = st=>{
+      const sum = stateSummary(st.uf), cs = sum.cs.filter(c=>shown.has(c.id));
+      if(S.filter!=='all' && !cs.length) return '';
+      const open = S.expanded.has(st.uf), mine = st.uf===S.juris;
+      const meta = !sum.fires ? t('st.none') : sum.cs.length ? t('st.in',{f:firesTxt(sum.fires), m:t(sum.cs.length>1?'st.mun.n':'st.mun.1',{n:sum.cs.length})}) : firesTxt(sum.fires);
+      const head = `<li class="srow${sum.fires?' t-'+sum.top:' calm'}${mine?' mine':''}"><button class="sbtn" data-uf="${st.uf}" aria-expanded="${open}">
+        <span class="sname">${esc(st.name)} <span class="uf">${st.uf}</span>${mine?` <span class="you">${t('st.yours')}</span>`:''}</span>
+        <span class="smeta">${sum.top?`<span class="tier">${tierName(sum.top)}</span>`:''}<span>${meta}</span></span></button></li>`;
+      return head + (open && cs.length ? `<li class="sgroup"><ul>${cs.map(row).join('')}</ul></li>` : '');
+    };
+    const html = REGION_ORDER.map(reg=>{
+      const sts = STATES.filter(s=>s.region===reg)
+        .sort((a,b)=> stateSummary(b.uf).fires - stateSummary(a.uf).fires || a.name.localeCompare(b.name, I18N.locale()));
+      const rows = sts.map(stateRow).join('');
+      return rows ? `<li class="qgroup" role="presentation">${t('region.'+reg)}</li>${rows}` : '';
+    }).join('');
+    document.getElementById('queue').innerHTML = html || `<li class="empty">${t(S.filter==='open'?'q.empty.open':'q.empty.active')}</li>`;
   }
+  function stateBounds(uf){ return L.polygon(geomLL(stateGeom[uf])).getBounds(); }
 
   /* ---------- map (Leaflet + NASA GIBS imagery) ---------- */
   const SAT_DATE = '2026-11-12';                       // day of the FIRMS sample shown on the map
@@ -408,7 +435,7 @@ function main(D, C) {
     try{ navigator.clipboard.writeText(S.lastCap).then(done,fallback); }catch(e){ fallback(); } };
 
   /* ---------- actions ---------- */
-  function select(id){ S.sel=id; renderQueue(); drawSelection(); renderSide(); renderMapTitle(); drawPoints(); fitTo(id); }
+  function select(id){ S.sel=id; if(id) S.expanded.add(byId[id].uf); renderQueue(); drawSelection(); renderSide(); renderMapTitle(); drawPoints(); fitTo(id); }
   function renderMapTitle(){ document.getElementById('maptitle').textContent = S.sel ? `${byId[S.sel].name}, ${byId[S.sel].uf}` : t('map.brazil'); }
   function startDraft(c,it){ if(c.uf!==S.juris) return; it.status='draft'; it.lang='pt'; addLog(analyst(), ['log.started',{name:c.name, uf:c.uf}]); }
   function act(name){
@@ -450,6 +477,10 @@ function main(D, C) {
     }
   }
   document.getElementById('queue').addEventListener('click', e=>{
+    const sb=e.target.closest('.sbtn');
+    if(sb){ const uf=sb.dataset.uf; if(S.expanded.has(uf)) S.expanded.delete(uf); else S.expanded.add(uf); renderQueue();
+      map.fitBounds(stateBounds(uf), {paddingTopLeft:[30,50], paddingBottomRight:[30,60], animate:!reduceMotion()});
+      const again=document.querySelector(`.sbtn[data-uf="${uf}"]`); if(again) again.focus(); return; }
     const li=e.target.closest('.qitem'); if(!li) return;
     const qa=e.target.closest('[data-qa]');
     select(li.dataset.id);
@@ -458,14 +489,19 @@ function main(D, C) {
     if(qa.dataset.qa==='analyze'){ startDraft(c,it); renderQueue(); drawSelection(); renderSide(); const f=document.getElementById('f-event'); if(f) f.focus(); }
     else if(qa.dataset.qa==='review' || qa.dataset.qa==='cancelask') act(qa.dataset.qa);
   });
-  document.getElementById('queue').addEventListener('keydown', e=>{ const li=e.target.closest('.qitem'); if(!li || e.target.closest('[data-qa]')) return;
-    if(e.key==='Enter'||e.key===' '){ e.preventDefault(); select(li.dataset.id); }
-    if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); let sib=li; do { sib=e.key==='ArrowDown'?sib.nextElementSibling:sib.previousElementSibling; } while(sib && !sib.classList.contains('qitem')); if(sib) sib.focus(); } });
+  // Arrow keys move between states and municipalities; Enter/Space opens a state or selects a municipality.
+  document.getElementById('queue').addEventListener('keydown', e=>{
+    const cur=e.target.closest('.sbtn, .qitem'); if(!cur || e.target.closest('[data-qa]')) return;
+    if(cur.classList.contains('qitem') && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); select(cur.dataset.id); }
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault();
+      const all=[...document.querySelectorAll('#queue .sbtn, #queue .qitem')], i=all.indexOf(cur);
+      const next=all[i+(e.key==='ArrowDown'?1:-1)]; if(next) next.focus(); } });
   document.querySelectorAll('.filters button').forEach(b=>b.onclick=()=>{ S.filter=b.dataset.f; document.querySelectorAll('.filters button').forEach(x=>x.setAttribute('aria-pressed', x===b)); renderQueue(); });
   const jsel=document.getElementById('juris');
-  [...new Set(D.cands.map(c=>c.uf))].sort().forEach(u=>{ const o=document.createElement('option'); o.value=u; if(u===S.juris) o.selected=true; jsel.appendChild(o); });
-  const renderJuris = () => [...jsel.options].forEach(o=>{ o.textContent=t('juris.opt',{uf:o.value}); });
-  jsel.onchange=()=>{ S.juris=jsel.value; renderQueue(); renderSide(); };
+  [...STATES].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).forEach(st=>{ const o=document.createElement('option'); o.value=st.uf; o.dataset.name=st.name; if(st.uf===S.juris) o.selected=true; jsel.appendChild(o); });
+  const renderJuris = () => [...jsel.options].forEach(o=>{ o.textContent=t('juris.opt',{uf:o.value, name:o.dataset.name}); });
+  jsel.onchange=()=>{ S.juris=jsel.value; S.expanded.add(S.juris); renderQueue(); renderSide();
+    map.fitBounds(stateBounds(S.juris), {paddingTopLeft:[30,50], paddingBottomRight:[30,60], animate:!reduceMotion()}); };
   document.getElementById('zoom-out').onclick=()=>select(null);
   const renderSound = () => { document.getElementById('sound').textContent=t(S.sound?'sound.on':'sound.off'); };
   document.getElementById('sound').onclick=()=>{ S.sound=!S.sound; renderSound(); };
