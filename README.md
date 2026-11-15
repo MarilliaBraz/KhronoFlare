@@ -26,7 +26,7 @@ Baixe-os em https://firms.modaps.eosdis.nasa.gov/download/ e coloque-os na raiz 
 
 ## Como contribuir
 
-1. Clone: `git clone https://github.com/MarilliaBraz/nasa-space-apps-2026.git`
+1. Clone: `git clone https://github.com/MarilliaBraz/KhronoFlare.git`
 2. Instale as dependências (Python 3.12):
    `python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt`
 3. Rode os testes: `.venv/bin/python -m pytest -q`
