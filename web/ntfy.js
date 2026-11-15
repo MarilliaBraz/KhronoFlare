@@ -42,19 +42,19 @@
 
   function drawQr(url) {
     const box = $('rp-qr'); box.innerHTML = '';
-    if (!url) { box.textContent = 'Add the page address below'; return; }
+    if (!url) { box.textContent = I18N.t('rp.qr-add'); return; }
     if (window.QRCode) {
       try { new QRCode(box, { text: url, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M }); return; }
       catch (e) { /* fall through */ }
     }
-    box.textContent = 'QR code unavailable';
+    box.textContent = I18N.t('rp.qr-none');
   }
 
   function render() {
     document.querySelectorAll('[data-rpmode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.rpmode === mode));
     const url = target();
     drawQr(url);
-    const a = $('rp-link'); a.href = url || '#'; a.textContent = url || '(set the page address first)';
+    const a = $('rp-link'); a.href = url || '#'; a.textContent = url || I18N.t('rp.link-none');
     $('rp-topic').textContent = topic; $('rp-app').textContent = topic;
     $('rp-base').value = base;
     $('rp-page-help').hidden = mode !== 'page';
@@ -63,11 +63,14 @@
     warn.hidden = !(mode === 'page' && (!base || /\/\/(localhost|127\.0\.0\.1)/.test(base)));
   }
 
-  function status(text, cls) { const s = $('rp-status'); s.textContent = text; s.className = 'rp-status ' + (cls || ''); }
+  // Status is kept as [key, vars, class] so it can be redrawn when the interface language changes.
+  let last = ['rp.s.none', {}, ''];
+  function showStatus() { const s = $('rp-status'); s.textContent = I18N.t(last[0], last[1]); s.className = 'rp-status ' + (last[2] || ''); }
+  function status(key, vars, cls) { last = [key, vars || {}, cls || '']; showStatus(); }
 
   async function publish(kind, place, message) {
     const k = KIND[kind];
-    status('Sending to the phone channel…');
+    status('rp.s.sending');
     try {
       // JSON publish to the root URL; a plain-text body keeps it a simple CORS request.
       const r = await fetch(NTFY, {
@@ -75,10 +78,10 @@
         body: JSON.stringify({ topic, title: `SIMULATION · ${k.label} · ${place}`, message, priority: k.priority, tags: k.tags })
       });
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      status(`${k.label} delivered to the channel at ${new Date().toLocaleTimeString()}`, 'ok');
+      status('rp.s.delivered', { label: I18N.t('pop.' + kind), time: new Date().toLocaleTimeString(I18N.locale()) }, 'ok');
       return true;
     } catch (e) {
-      status(`Could not reach ntfy.sh (${e.message}). The phone preview on this page still works.`, 'bad');
+      status('rp.s.fail', { err: e.message }, 'bad');
       return false;
     }
   }
@@ -94,21 +97,23 @@
   $('rp-basesave').addEventListener('click', () => {
     let v = $('rp-base').value.trim();
     if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
-    try { if (v) new URL(v); } catch (e) { status('That address is not valid. Example: https://your-user.github.io/nasa-space-apps-2026/web/', 'bad'); return; }
+    try { if (v) new URL(v); } catch (e) { status('rp.s.badaddr', {}, 'bad'); return; }
     base = v; put(STORE_BASE, v || null); render();
-    status(v ? 'Page address saved. Scan the new code.' : 'Page address cleared.', v ? 'ok' : '');
+    status(v ? 'rp.s.saved' : 'rp.s.cleared', {}, v ? 'ok' : '');
   });
   $('rp-test').addEventListener('click', () =>
     publish('test', 'Test', 'Test from the Hotspot Alert Console. If you can read this, the phone is connected.'));
   $('rp-new').addEventListener('click', () => {
     topic = randomTopic(); put(STORE, topic); render();
-    status('New channel created. Scan the new code on the phone.');
+    status('rp.s.newch');
   });
   $('rp-copy').addEventListener('click', () => {
     const url = target();
-    if (!url) { status('Set the page address first.', 'bad'); return; }
-    try { navigator.clipboard.writeText(url).then(() => status('Link copied.', 'ok'), () => status('Copy failed. Select the link and copy it.', 'bad')); }
-    catch (e) { status('Copy failed. Select the link and copy it.', 'bad'); }
+    if (!url) { status('rp.s.noaddr', {}, 'bad'); return; }
+    try { navigator.clipboard.writeText(url).then(() => status('rp.s.copied', {}, 'ok'), () => status('rp.s.copyfail', {}, 'bad')); }
+    catch (e) { status('rp.s.copyfail', {}, 'bad'); }
   });
   render();
+  showStatus();
+  I18N.onChange(() => { render(); showStatus(); });
 })();
