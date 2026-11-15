@@ -4,7 +4,13 @@ Fonte: tabelas públicas do repositório kelvins/municipios-brasileiros (código
   https://raw.githubusercontent.com/kelvins/municipios-brasileiros/main/csv/municipios.csv
   https://raw.githubusercontent.com/kelvins/municipios-brasileiros/main/csv/estados.csv
 
-    python3 web/tools/build_cities.py <pasta com os dois CSV> web/cities.json
+    python3 web/tools/build_cities.py <pasta com os dois CSV> web/cities.json [<pasta com malhas do IBGE>]
+
+Com a pasta de malhas (um GeoJSON por estado, de
+https://servicodados.ibge.gov.br/api/v3/malhas/estados/{codigo_uf}?intrarregiao=municipio&formato=application/vnd.geo%2Bjson&qualidade=minima),
+cada sede é conferida contra o contorno do próprio município. Sede a mais de MAX_OFF graus do
+contorno é um erro da tabela de origem (ex.: Pau d'Arco, PA, estava a 6,7° do município) e passa a
+usar o centroide do maior polígono do município. Desvios menores vêm do contorno simplificado.
 
 Saída compacta (o painel carrega no navegador):
   states: [{uf, name, region, lat, lon}]          27 estados, região em inglês (North, Northeast...)
@@ -16,6 +22,8 @@ import csv
 import json
 import sys
 from pathlib import Path
+
+MAX_OFF = 0.1  # graus; acima disso a sede da tabela está em outro lugar
 
 REGIONS = {"Norte": "North", "Nordeste": "Northeast", "Centro-Oeste": "Central-West",
            "Sudeste": "Southeast", "Sul": "South"}
@@ -57,10 +65,58 @@ def build(src: Path) -> dict:
     return {"states": states, "cities": cities}
 
 
+def _polygons(geometry: dict) -> list:
+    return geometry["coordinates"] if geometry["type"] == "MultiPolygon" else [geometry["coordinates"]]
+
+
+def _inside(x: float, y: float, ring: list) -> bool:
+    inside, j = False, len(ring) - 1
+    for i, (xi, yi) in enumerate(ring):
+        xj, yj = ring[j]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi) + xi:
+            inside = not inside
+        j = i
+    return inside
+
+
+def _centroid(ring: list) -> tuple[float, float]:
+    a = cx = cy = 0.0
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
+        cross = x1 * y2 - x2 * y1
+        a, cx, cy = a + cross, cx + (x1 + x2) * cross, cy + (y1 + y2) * cross
+    return cx / (3 * a), cy / (3 * a)
+
+
+def _area(ring: list) -> float:
+    return abs(sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]))) / 2
+
+
+def fix_seats(cities: list, meshes: Path) -> list[str]:
+    """Troca a coordenada das sedes muito fora do próprio município pelo centroide dele."""
+    shapes = {}
+    for f in sorted(meshes.glob("*.json")):
+        for feat in json.loads(f.read_text(encoding="utf-8"))["features"]:
+            shapes[feat["properties"]["codarea"]] = _polygons(feat["geometry"])
+    fixed = []
+    for city in cities:
+        polys = shapes.get(city[0])
+        if not polys or any(_inside(city[4], city[3], p[0]) for p in polys):
+            continue
+        off = min(((city[4] - x) ** 2 + (city[3] - y) ** 2) ** 0.5 for p in polys for ring in p for x, y in ring)
+        if off > MAX_OFF:
+            lon, lat = _centroid(max((p[0] for p in polys), key=_area))
+            fixed.append(f"{city[1]} ({city[2]}): {city[3]}, {city[4]} -> {lat:.4f}, {lon:.4f}")
+            city[3], city[4] = round(lat, 4), round(lon, 4)
+    return fixed
+
+
 def main() -> None:
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in (3, 4):
         raise SystemExit(__doc__)
     data = build(Path(sys.argv[1]))
+    if len(sys.argv) == 4:
+        for line in fix_seats(data["cities"], Path(sys.argv[3])):
+            print("corrigida:", line)
     out = Path(sys.argv[2])
     out.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"{out}: {len(data['states'])} estados, {len(data['cities'])} municípios, "

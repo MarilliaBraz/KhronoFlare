@@ -35,6 +35,31 @@ function main(D, C) {
   function munArea(c){ const lat0=(c.bbox[1]+c.bbox[3])/2; return c.geom.reduce((s,poly)=> s + ringArea(poly[0],lat0) - poly.slice(1).reduce((t,h)=>t+ringArea(h,lat0),0), 0); }
   function areaOf(c,it){ return it.areaMode==='hull' ? c.areaKm2 : munArea(c); }
 
+  /* ---------- who the alert reaches: municipal seats inside the alert polygon ---------- */
+  function inRing(x, y, ring){ let ins=false; for(let i=0,j=ring.length-1;i<ring.length;j=i++){ const [xi,yi]=ring[i], [xj,yj]=ring[j];
+    if((yi>y)!==(yj>y) && x < (xj-xi)*(y-yi)/(yj-yi)+xi) ins=!ins; } return ins; }
+  function inPolys(x, y, polys){ return polys.some(poly => inRing(x,y,poly[0]) && !poly.slice(1).some(h=>inRing(x,y,h))); }
+  function citiesIn(c, it){
+    const polys = it.areaMode==='hull' ? [[c.poly]] : c.geom;
+    const pts = polys.flat(2), x0=Math.min(...pts.map(p=>p[0])), x1=Math.max(...pts.map(p=>p[0])), y0=Math.min(...pts.map(p=>p[1])), y1=Math.max(...pts.map(p=>p[1]));
+    return CITIES.filter(k => k[4]>=x0 && k[4]<=x1 && k[3]>=y0 && k[3]<=y1 && inPolys(k[4], k[3], polys))
+      .sort((a,b)=> b[5]-a[5] || a[1].localeCompare(b[1], 'pt-BR'));
+  }
+  function reachHtml(c, it){
+    if(!CITIES.length) return '';
+    const ks = citiesIn(c, it);
+    const list = ks.map(k=>`<li${k[5]?' class="cap"':''}>${esc(k[1])} <span class="uf">${k[2]}</span></li>`).join('');
+    return `<div class="reach"><span class="reach-h">${t('reach.h',{n:ks.length})}</span>${ks.length ? `<ul>${list}</ul>` : `<p class="hint">${t('reach.none')} ${nearestTown(c)}</p>`}</div>`;
+  }
+  // Nearest municipal seat to the centre of the municipality's fires, with the distance in km.
+  function nearestTown(c){
+    const fs = D.points.filter(p=>p.mun===c.id); if(!fs.length) return '';
+    const lat = fs.reduce((s,p)=>s+p.lat,0)/fs.length, lon = fs.reduce((s,p)=>s+p.lon,0)/fs.length;
+    const km = (a,b,c2,d) => { const r=Math.PI/180, x=Math.sin((c2-a)*r/2)**2 + Math.cos(a*r)*Math.cos(c2*r)*Math.sin((d-b)*r/2)**2; return 12742*Math.asin(Math.sqrt(x)); };
+    let best=null, bd=Infinity; CITIES.forEach(k=>{ const d=km(lat,lon,k[3],k[4]); if(d<bd){ bd=d; best=k; } });
+    return best ? t('reach.nearest',{name:esc(best[1]), uf:best[2], km:fmtInt(bd)}) : '';
+  }
+
   /* ---------- message ---------- */
   const T = {
     en:{ title:{wildfire:'WILDFIRE ALERT', smoke:'HEAVY SMOKE ALERT', risk:'HIGH FIRE RISK'},
@@ -327,6 +352,7 @@ function main(D, C) {
             <div class="field"><label for="f-msg">${t('form.edit')}</label><textarea id="f-msg">${esc(msg)}</textarea>
               ${it.edited?`<button class="btn sm" data-act="reset" style="justify-self:start">${t('form.reset')}</button>`:''}</div>
           </div></details>
+        ${reachHtml(c,it)}
         <div id="checks">${checksHtml(cs)}</div>
         <div class="actions"><button class="btn primary" data-act="submit" ${hardFail(cs)?'disabled':''}>${t('form.submit')}</button><button class="btn" data-act="discard">${t('form.discard')}</button></div></div>`;
     }
@@ -353,6 +379,7 @@ function main(D, C) {
     const lv = `<span class="chip ${it.level}">${t('lvl.'+it.level)}</span>`;
     return `<div><span class="eyebrow">${t('sheet.review')}</span><h2 id="sheet-h">${t('sheet.review.h',{name:esc(c.name), uf:c.uf})}</h2></div>
       <div>${t('sheet.review.sum',{level:lv, a:fmtInt(areaOf(c,it)), h:it.hours, uf:c.uf})}</div>
+      ${reachHtml(c,it)}
       <div class="msgbox">${esc(msgOf(c,it))}</div>${checksHtml(cs)}
       <label class="ack"><input type="checkbox" id="ack-who"> ${t('sheet.ack-who')}</label>
       ${warn?`<label class="ack"><input type="checkbox" id="ack-warn"> ${t('sheet.ack-warn')}</label>`:''}
