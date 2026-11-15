@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://ntfy.sh; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111816">
+<title>Alert Receiver</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Phone receiver: one column, dark by design so the alert card stands out. */
+:root{
+  --bg:#111816; --panel:#1a2320; --line:#2b3833; --ink:#e7eeeb; --muted:#97a6a0; --accent:#4cc2a6; --accent-ink:#06211b;
+  --extreme:#d8261b; --severe:#d98200; --cancel:#5c6b66; --test:#2f7d6d;
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-head:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.45;
+  padding:max(18px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+[hidden]{display:none!important}
+.wrap{max-width:460px;margin:0 auto;display:grid;gap:16px}
+h1,h2{font-family:var(--font-head);margin:0;text-wrap:balance}
+h1{font-size:24px} h2{font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:10px}
+label{font-size:13px;color:var(--muted);font-weight:600}
+input{font:inherit;font-family:var(--font-data);font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:10px 12px;width:100%}
+button{font:inherit;cursor:pointer}
+.big{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:16px;font-weight:700;font-size:17px}
+.ghost{background:none;color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:8px 12px;justify-self:start}
+.hint{margin:0;color:var(--muted);font-size:13px}
+.state{display:flex;gap:10px;align-items:center;font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.live .dot{background:var(--accent);animation:pulse 1.6s infinite}
+.retry .dot{background:var(--severe)}
+@keyframes pulse{50%{opacity:.3}}
+#hist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+#hist li{border-left:4px solid var(--cancel);padding:4px 0 4px 10px;font-size:13px}
+#hist li.extreme{border-color:var(--extreme)} #hist li.severe{border-color:var(--severe)} #hist li.test{border-color:var(--test)}
+#hist .t{font-family:var(--font-data);color:var(--muted);font-size:12px}
+#hist .none{border:0;padding:0;color:var(--muted)}
+code,b.mono{font-family:var(--font-data)}
+
+/* full-screen alert */
+.alert{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:rgba(0,0,0,.72);
+  padding:max(16px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px))}
+.alert::before{content:"";position:absolute;inset:0;border:10px solid var(--k);animation:edge 1s infinite;pointer-events:none}
+@keyframes edge{50%{opacity:.15}}
+.alert{--k:var(--extreme)} .alert.severe{--k:var(--severe)} .alert.cancel{--k:var(--cancel)} .alert.test{--k:var(--test)}
+.card{position:relative;width:min(420px,100%);max-height:100%;overflow:auto;background:#fbfbfa;color:#161a19;border-radius:20px;padding:18px 18px 12px;box-shadow:0 20px 50px rgba(0,0,0,.5);animation:drop .35s ease-out}
+@keyframes drop{from{transform:translateY(-16px) scale(.97);opacity:0}}
+.ah{display:flex;gap:10px;align-items:center;font-family:var(--font-head);font-weight:700;font-size:22px}
+.tri{width:30px;height:27px;flex:none;background:var(--k);clip-path:polygon(50% 0,100% 100%,0 100%);position:relative}
+.tri::after{content:"!";position:absolute;inset:7px 0 0;color:#fff;font-size:15px;font-weight:800;text-align:center;font-family:var(--font-ui)}
+.place{margin-top:4px;font-weight:600;color:#3d4643}
+#al-msg{font-size:16px;line-height:1.45;margin:12px 0 14px;white-space:pre-wrap}
+.af{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #e2e4e3;padding-top:10px;font-size:11.5px;color:#5d6663}
+.af button{background:none;border:0;color:#0d6b5b;font-weight:700;font-size:17px;padding:6px 10px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>Alert receiver</h1>
+    <p class="sub">Simulated phone for the Hotspot Alert Console · NASA Space Apps 2026</p>
+  </header>
+
+  <section id="setup" aria-labelledby="setup-h">
+    <h2 id="setup-h">Connect</h2>
+    <label for="topic">Channel</label>
+    <input id="topic" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="hac-…">
+    <button id="start" class="big">Start receiving alerts</button>
+    <p class="hint">The tap lets this page play the siren and vibrate. Keep the page open and the screen on.</p>
+  </section>
+
+  <section id="live" hidden aria-live="polite">
+    <div class="state" id="statebox"><span class="dot"></span><span id="state">Connecting…</span></div>
+    <p class="hint">Channel <b class="mono" id="ch"></b>. When an alert is approved in the console, it shows up here.</p>
+    <button id="stop" class="ghost">Disconnect</button>
+  </section>
+
+  <section aria-labelledby="hist-h">
+    <h2 id="hist-h">Received</h2>
+    <ol id="hist"><li class="none">Nothing yet.</li></ol>
+  </section>
+
+  <section aria-labelledby="app-h">
+    <h2 id="app-h">Also as a system notification</h2>
+    <p class="hint">Install the free ntfy app (Android or iOS), tap <b>+</b> and subscribe to <b class="mono" id="ch2">your channel</b> on ntfy.sh. Approved alerts then also arrive as notifications, even with this page closed.</p>
+  </section>
+</main>
+
+<div id="alert" class="alert" hidden role="alertdialog" aria-modal="true" aria-labelledby="al-title" aria-describedby="al-msg">
+  <div class="card">
+    <div class="ah"><span class="tri" aria-hidden="true"></span><span id="al-title">Extreme alert</span></div>
+    <div class="place" id="al-place"></div>
+    <p id="al-msg"></p>
+    <div class="af"><span>SIMULATION · not an official alert</span><button id="al-ok">OK</button></div>
+  </div>
+</div>
+
+<script src="phone.js"></script>
+</body>
+</html>

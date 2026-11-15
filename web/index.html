@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://ntfy.sh; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hotspot Alert Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true"></span>
+    <div><h1>Hotspot Alert Console</h1>
+      <p>Real NASA FIRMS detections, 12 Nov 2026 · alerts are simulated</p></div></div>
+  <div class="who">
+    <button class="btn sm" id="howto">How it works</button>
+    <label for="juris">Your area</label>
+    <select id="juris"></select>
+  </div>
+</header>
+
+<main class="grid">
+  <section class="panel" aria-labelledby="q-h">
+    <div class="phead"><h2 id="q-h">Areas with fire</h2></div>
+    <div class="filters" role="group" aria-label="Filter">
+      <button data-f="all" aria-pressed="true">All <span class="n"></span></button>
+      <button data-f="open" aria-pressed="false">To do <span class="n"></span></button>
+      <button data-f="active" aria-pressed="false">Alerts <span class="n"></span></button>
+    </div>
+    <ul class="qlist" id="queue" role="listbox" aria-label="Municipalities with fire detections"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="m-h">
+    <div class="phead"><h2 id="m-h">Map</h2>
+      <div class="legend">
+        <span class="lg"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="var(--f2)"/></svg>VIIRS</span>
+        <span class="lg"><svg width="12" height="12" aria-hidden="true"><path d="M6 1L11 6L6 11L1 6Z" fill="var(--f2)"/></svg>MODIS</span>
+        <span class="lg"><svg width="40" height="10" aria-hidden="true"><rect width="13" height="10" fill="var(--f1)"/><rect x="13" width="13" height="10" fill="var(--f2)"/><rect x="26" width="14" height="10" fill="var(--f3)"/></svg>weak → strong fire</span>
+      </div></div>
+    <div class="mapwrap"><div class="maptitle" id="maptitle">Brazil</div><svg id="map" role="img" aria-label="Map of fire detections"></svg>
+      <button class="btn sm mapzoom" id="zoom-out">All of Brazil</button></div>
+    <p class="mapbar" id="mapstats"></p>
+  </section>
+
+  <section class="panel side" id="side" aria-live="polite"></section>
+</main>
+
+<section class="panel lower" id="lower" aria-label="Phone and activity">
+  <div class="tabs" role="tablist" aria-label="Phone and activity">
+    <button role="tab" id="tab-phone" aria-selected="true" aria-controls="pane-phone">Phone preview</button>
+    <button role="tab" id="tab-real" aria-selected="false" aria-controls="pane-real" tabindex="-1">Real phone</button>
+    <button role="tab" id="tab-log" aria-selected="false" aria-controls="pane-log" tabindex="-1">Activity <span class="n" id="logn">0</span></button>
+  </div>
+
+  <div class="pane" id="pane-phone" role="tabpanel" aria-labelledby="tab-phone">
+    <div class="phonecol">
+      <div class="phone" aria-label="Simulated phone"><div class="screen">
+        <div class="sbar"><span id="ph-time">--:--</span><span>4G ▮▮▮</span></div>
+        <div class="lock"><div class="clk" id="ph-clock">--:--</div><div class="dt" id="ph-date"></div></div>
+        <div class="pop" id="pop" hidden></div>
+      </div></div>
+      <div class="phonetext">
+        <p class="phonecap" id="phonecap">No alert yet. Approve one and it appears on this phone.</p>
+        <button class="btn sm" id="sound">Alert sound: on</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-real" role="tabpanel" aria-labelledby="tab-real" hidden>
+    <div class="rp">
+      <div class="rp-left">
+        <div class="seg" role="group" aria-label="How the phone receives">
+          <button data-rpmode="ntfy" aria-pressed="true">ntfy (works now)</button>
+          <button data-rpmode="page" aria-pressed="false">Full-screen page</button>
+        </div>
+        <div id="rp-qr" class="rp-qr" role="img" aria-label="QR code for the phone"></div>
+      </div>
+      <div class="rp-side">
+        <ol class="rp-steps" id="rp-ntfy-help">
+          <li>Scan the code with the phone camera. It opens <a id="rp-link" target="_blank" rel="noopener"></a></li>
+          <li>On that page, tap <strong>Subscribe</strong> and allow notifications. For a stronger alert, install the free ntfy app and subscribe to the channel <b class="num" id="rp-app"></b></li>
+          <li>Press <strong>Send test</strong> here to check it arrives</li>
+        </ol>
+        <ol class="rp-steps" id="rp-page-help" hidden>
+          <li>Scan the code with the phone camera</li>
+          <li>Tap <strong>Start receiving alerts</strong> on the phone</li>
+          <li>Press <strong>Send test</strong> here to check it arrives</li>
+        </ol>
+        <p class="rp-status bad" id="rp-basewarn" hidden>The full-screen page needs an address the phone can open, such as the project's GitHub Pages link. <code>localhost</code> only exists on this computer.</p>
+        <div class="actions"><button class="btn sm primary" id="rp-test">Send test</button><button class="btn sm" id="rp-copy">Copy link</button></div>
+        <label class="rp-toggle"><input type="checkbox" id="rp-on" checked> Send approved alerts to real phones</label>
+        <p id="rp-status" class="rp-status">Nothing sent yet.</p>
+        <details class="more"><summary>Settings</summary>
+          <div class="field"><label for="rp-base">Address where this folder is published (for the full-screen page)</label>
+            <div class="actions"><input id="rp-base" class="rp-input" placeholder="https://your-user.github.io/nasa-space-apps-2026/web/" autocomplete="off" spellcheck="false"><button class="btn sm" id="rp-basesave">Save</button></div></div>
+          <p class="rp-small">Channel <span class="num" id="rp-topic"></span> on ntfy.sh. Anyone who knows the channel name can read it, so it only carries simulations.</p>
+          <button class="btn sm" id="rp-new">New channel</button>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-log" role="tabpanel" aria-labelledby="tab-log" hidden>
+    <ul class="log" id="log"></ul>
+    <details class="cap" id="capbox" hidden><summary>CAP 1.2 export of the last alert</summary>
+      <div class="actions" style="margin:8px 0"><button class="btn sm" id="copycap">Copy CAP XML</button><span id="copied" style="font-size:12px;color:var(--muted)"></span></div>
+      <pre id="capxml"></pre></details>
+  </div>
+</section>
+
+<div class="sheet" id="sheet" hidden><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="sheet-h" id="sheet-body"></div></div>
+<p class="foot">Prototype for NASA Space Apps 2026. Detections: NASA FIRMS NRT sample (Terra/Aqua MODIS, NOAA-20 VIIRS). Boundaries: IBGE. The priority score is provisional. The harmonized intensity and the historical anomaly per place will come from <span class="num">firms_harmonize</span> and are not shown yet. Real alerts can only be sent by civil protection.</p>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="ntfy.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
