@@ -13,34 +13,38 @@
 <body>
 <header class="top">
   <div class="brand"><span class="mark" aria-hidden="true"></span>
-    <div><h1>Hotspot Alert Console</h1>
-      <p>Real NASA FIRMS detections from 12 Nov 2026. Alerts are simulated.</p></div></div>
+    <div><h1 data-i18n="title">Hotspot Alert Console</h1>
+      <p data-i18n="subtitle">Real NASA FIRMS detections from 12 Nov 2026. Alerts are simulated.</p></div></div>
   <div class="who">
-    <button class="btn sm" id="howto">How it works</button>
-    <label for="juris">Your area</label>
+    <div class="langs" role="group" data-i18n-attr="aria-label:lang.group" aria-label="Language">
+      <button class="lang" data-lang="pt" aria-pressed="false" lang="pt-BR" data-i18n-attr="aria-label:lang.pt"><svg class="flag" viewBox="0 0 20 14" aria-hidden="true"><rect width="20" height="14" rx="2" fill="#009c3b"/><path d="M10 1.6L18.2 7L10 12.4L1.8 7Z" fill="#ffdf00"/><circle cx="10" cy="7" r="3.1" fill="#002776"/><path d="M7.1 6.2a6 6 0 0 1 5.8 1.3" stroke="#fff" stroke-width=".7" fill="none"/></svg><span aria-hidden="true">PT</span></button>
+      <button class="lang" data-lang="en" aria-pressed="true" lang="en" data-i18n-attr="aria-label:lang.en"><svg class="flag" viewBox="0 0 20 14" aria-hidden="true"><clipPath id="fus"><rect width="20" height="14" rx="2"/></clipPath><g clip-path="url(#fus)"><rect width="20" height="14" fill="#fff"/><path d="M0 0h20M0 2.15h20M0 4.3h20M0 6.45h20M0 8.6h20M0 10.75h20M0 12.9h20" stroke="#b22234" stroke-width="1.08" transform="translate(0 .54)"/><rect width="8.6" height="7.54" fill="#3c3b6e"/></g></svg><span aria-hidden="true">EN</span></button>
+    </div>
+    <button class="btn sm" id="howto" data-i18n="howto">How it works</button>
+    <label for="juris" data-i18n="your-area">Your area</label>
     <select id="juris"></select>
   </div>
 </header>
 
 <main class="grid">
   <section class="panel" aria-labelledby="q-h">
-    <div class="phead"><h2 id="q-h">Areas with fire</h2></div>
-    <div class="filters" role="group" aria-label="Filter">
-      <button data-f="all" aria-pressed="true">All <span class="n"></span></button>
-      <button data-f="open" aria-pressed="false">To do <span class="n"></span></button>
-      <button data-f="active" aria-pressed="false">Alerts <span class="n"></span></button>
+    <div class="phead"><h2 id="q-h" data-i18n="q.h">Areas with fire</h2></div>
+    <div class="filters" role="group" aria-label="Filter" data-i18n-attr="aria-label:filter">
+      <button data-f="all" aria-pressed="true"><span data-i18n="filter.all">All</span> <span class="n"></span></button>
+      <button data-f="open" aria-pressed="false"><span data-i18n="filter.open">To do</span> <span class="n"></span></button>
+      <button data-f="active" aria-pressed="false"><span data-i18n="filter.active">Alerts</span> <span class="n"></span></button>
     </div>
-    <ul class="qlist" id="queue" role="listbox" aria-label="Municipalities with fire detections"></ul>
+    <ul class="qlist" id="queue" role="listbox" aria-label="Municipalities with fire detections" data-i18n-attr="aria-label:queue.aria"></ul>
   </section>
 
   <section class="panel" aria-labelledby="m-h">
-    <h2 id="m-h" class="vh">Map</h2>
-    <div class="mapwrap"><div class="maptitle" id="maptitle">Brazil</div><svg id="map" role="img" aria-label="Map of fire detections"></svg>
-      <button class="btn sm mapzoom" id="zoom-out">All of Brazil</button>
+    <h2 id="m-h" class="vh" data-i18n="map.h">Map</h2>
+    <div class="mapwrap"><div class="maptitle" id="maptitle">Brazil</div><svg id="map" role="img" aria-label="Map of fire detections" data-i18n-attr="aria-label:map.aria"></svg>
+      <button class="btn sm mapzoom" id="zoom-out" data-i18n="map.zoomout">All of Brazil</button>
       <div class="legend">
         <span class="lg"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="var(--f2)"/></svg>VIIRS</span>
         <span class="lg"><svg width="12" height="12" aria-hidden="true"><path d="M6 1L11 6L6 11L1 6Z" fill="var(--f2)"/></svg>MODIS</span>
-        <span class="lg"><svg width="40" height="10" aria-hidden="true"><rect width="13" height="10" fill="var(--f1)"/><rect x="13" width="13" height="10" fill="var(--f2)"/><rect x="26" width="14" height="10" fill="var(--f3)"/></svg>Fire intensity</span>
+        <span class="lg"><svg width="40" height="10" aria-hidden="true"><rect width="13" height="10" fill="var(--f1)"/><rect x="13" width="13" height="10" fill="var(--f2)"/><rect x="26" width="14" height="10" fill="var(--f3)"/></svg><span data-i18n="legend.intensity">Fire intensity</span></span>
       </div></div>
     <p class="mapbar" id="mapstats"></p>
   </section>
@@ -48,16 +52,16 @@
   <section class="panel side" id="side" aria-live="polite"></section>
 </main>
 
-<section class="panel lower" id="lower" aria-label="Phone and activity">
-  <div class="tabs" role="tablist" aria-label="Phone and activity">
-    <button role="tab" id="tab-phone" aria-selected="true" aria-controls="pane-phone">Phone preview</button>
-    <button role="tab" id="tab-real" aria-selected="false" aria-controls="pane-real" tabindex="-1">Real phone</button>
-    <button role="tab" id="tab-log" aria-selected="false" aria-controls="pane-log" tabindex="-1">Activity <span class="n" id="logn">0</span></button>
+<section class="panel lower" id="lower" aria-label="Phone and activity" data-i18n-attr="aria-label:lower.aria">
+  <div class="tabs" role="tablist" aria-label="Phone and activity" data-i18n-attr="aria-label:lower.aria">
+    <button role="tab" id="tab-phone" aria-selected="true" aria-controls="pane-phone" data-i18n="tab.phone">Phone preview</button>
+    <button role="tab" id="tab-real" aria-selected="false" aria-controls="pane-real" tabindex="-1" data-i18n="tab.real">Real phone</button>
+    <button role="tab" id="tab-log" aria-selected="false" aria-controls="pane-log" tabindex="-1"><span data-i18n="tab.log">Activity</span> <span class="n" id="logn">0</span></button>
   </div>
 
   <div class="pane" id="pane-phone" role="tabpanel" aria-labelledby="tab-phone">
     <div class="phonecol">
-      <div class="phone" aria-label="Simulated phone"><div class="screen">
+      <div class="phone" aria-label="Simulated phone" data-i18n-attr="aria-label:phone.aria"><div class="screen">
         <div class="sbar"><span id="ph-time">--:--</span><span>4G ▮▮▮</span></div>
         <div class="lock"><div class="clk" id="ph-clock">--:--</div><div class="dt" id="ph-date"></div></div>
         <div class="pop" id="pop" hidden></div>
@@ -72,32 +76,32 @@
   <div class="pane" id="pane-real" role="tabpanel" aria-labelledby="tab-real" hidden>
     <div class="rp">
       <div class="rp-left">
-        <div class="seg" role="group" aria-label="How the phone receives">
-          <button data-rpmode="ntfy" aria-pressed="true">ntfy (works now)</button>
-          <button data-rpmode="page" aria-pressed="false">Full-screen page</button>
+        <div class="seg" role="group" aria-label="How the phone receives" data-i18n-attr="aria-label:rp.how">
+          <button data-rpmode="ntfy" aria-pressed="true" data-i18n="rp.ntfy">ntfy (works now)</button>
+          <button data-rpmode="page" aria-pressed="false" data-i18n="rp.page">Full-screen page</button>
         </div>
-        <div id="rp-qr" class="rp-qr" role="img" aria-label="QR code for the phone"></div>
+        <div id="rp-qr" class="rp-qr" role="img" aria-label="QR code for the phone" data-i18n-attr="aria-label:rp.qr"></div>
       </div>
       <div class="rp-side">
         <ol class="rp-steps" id="rp-ntfy-help">
-          <li>Scan the code with the phone camera. It opens <a id="rp-link" target="_blank" rel="noopener"></a></li>
-          <li>On that page, tap <strong>Subscribe</strong> and allow notifications. For a stronger alert, install the free ntfy app and subscribe to the channel <b class="num" id="rp-app"></b></li>
+          <li><span data-i18n="rp.n1">Scan the code with the phone camera. It opens</span> <a id="rp-link" target="_blank" rel="noopener"></a></li>
+          <li><span data-i18n-html="rp.n2">On that page, tap <strong>Subscribe</strong> and allow notifications. For a stronger alert, install the free ntfy app and subscribe to the channel</span> <b class="num" id="rp-app"></b></li>
           <li>Press <strong>Send test</strong> here to check it arrives</li>
         </ol>
         <ol class="rp-steps" id="rp-page-help" hidden>
-          <li>Scan the code with the phone camera</li>
-          <li>Tap <strong>Start receiving alerts</strong> on the phone</li>
+          <li data-i18n="rp.p1">Scan the code with the phone camera</li>
+          <li data-i18n-html="rp.p2">Tap <strong>Start receiving alerts</strong> on the phone</li>
           <li>Press <strong>Send test</strong> here to check it arrives</li>
         </ol>
-        <p class="rp-status bad" id="rp-basewarn" hidden>The full-screen page needs an address the phone can open, such as the project's GitHub Pages link. <code>localhost</code> only exists on this computer.</p>
-        <div class="actions"><button class="btn sm primary" id="rp-test">Send test</button><button class="btn sm" id="rp-copy">Copy link</button></div>
-        <label class="rp-toggle"><input type="checkbox" id="rp-on" checked> Send approved alerts to real phones</label>
+        <p class="rp-status bad" id="rp-basewarn" hidden data-i18n-html="rp.basewarn">The full-screen page needs an address the phone can open, such as the project's GitHub Pages link. <code>localhost</code> only exists on this computer.</p>
+        <div class="actions"><button class="btn sm primary" id="rp-test" data-i18n="rp.test">Send test</button><button class="btn sm" id="rp-copy" data-i18n="rp.copy">Copy link</button></div>
+        <label class="rp-toggle"><input type="checkbox" id="rp-on" checked> <span data-i18n="rp.on">Send approved alerts to real phones</span></label>
         <p id="rp-status" class="rp-status">Nothing sent yet.</p>
-        <details class="more"><summary>Settings</summary>
-          <div class="field"><label for="rp-base">Address where this folder is published (for the full-screen page)</label>
-            <div class="actions"><input id="rp-base" class="rp-input" placeholder="https://your-user.github.io/nasa-space-apps-2026/web/" autocomplete="off" spellcheck="false"><button class="btn sm" id="rp-basesave">Save</button></div></div>
-          <p class="rp-small">Channel <span class="num" id="rp-topic"></span> on ntfy.sh. Anyone who knows the channel name can read it, so it only carries simulations.</p>
-          <button class="btn sm" id="rp-new">New channel</button>
+        <details class="more"><summary data-i18n="rp.settings">Settings</summary>
+          <div class="field"><label for="rp-base" data-i18n="rp.base">Address where this folder is published (for the full-screen page)</label>
+            <div class="actions"><input id="rp-base" class="rp-input" placeholder="https://your-user.github.io/nasa-space-apps-2026/web/" autocomplete="off" spellcheck="false"><button class="btn sm" id="rp-basesave" data-i18n="rp.save">Save</button></div></div>
+          <p class="rp-small"><span data-i18n="rp.channel">Channel</span> <span class="num" id="rp-topic"></span> <span data-i18n="rp.channel-note">on ntfy.sh. Anyone who knows the channel name can read it, so it only carries simulations.</span></p>
+          <button class="btn sm" id="rp-new" data-i18n="rp.new">New channel</button>
         </details>
       </div>
     </div>
@@ -105,16 +109,17 @@
 
   <div class="pane" id="pane-log" role="tabpanel" aria-labelledby="tab-log" hidden>
     <ul class="log" id="log"></ul>
-    <details class="cap" id="capbox" hidden><summary>CAP 1.2 export of the last alert</summary>
-      <div class="actions" style="margin:8px 0"><button class="btn sm" id="copycap">Copy CAP XML</button><span id="copied" style="font-size:12px;color:var(--muted)"></span></div>
+    <details class="cap" id="capbox" hidden><summary data-i18n="cap.summary">CAP 1.2 export of the last alert</summary>
+      <div class="actions" style="margin:8px 0"><button class="btn sm" id="copycap" data-i18n="cap.copy">Copy CAP XML</button><span id="copied" style="font-size:12px;color:var(--muted)"></span></div>
       <pre id="capxml"></pre></details>
   </div>
 </section>
 
 <div class="sheet" id="sheet" hidden><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="sheet-h" id="sheet-body"></div></div>
-<footer class="foot"><p>Prototype for NASA Space Apps 2026. Only civil protection can send real alerts.</p>
-  <p>Data: NASA FIRMS near-real-time sample (Terra/Aqua MODIS, NOAA-20 VIIRS) and IBGE boundaries. The priority score is provisional; harmonized intensity and how unusual each fire is will come from <code>firms_harmonize</code>.</p></footer>
+<footer class="foot"><p data-i18n="foot.1">Prototype for NASA Space Apps 2026. Only civil protection can send real alerts.</p>
+  <p data-i18n-html="foot.2">Data: NASA FIRMS near-real-time sample (Terra/Aqua MODIS, NOAA-20 VIIRS) and IBGE boundaries. The priority score is provisional; harmonized intensity and how unusual each fire is will come from <code>firms_harmonize</code>.</p></footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="i18n.js"></script>
 <script src="ntfy.js"></script>
 <script src="app.js"></script>
 </body>
