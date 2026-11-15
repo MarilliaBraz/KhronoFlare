@@ -49,6 +49,7 @@ RISK_RES = 0.5                           # graus
 RISK_PERIOD = ("2003-01", "2021-12")
 RISK_TRAIN_YEARS = (2004, 2016)          # anos do mês-alvo
 RISK_TEST_YEARS = (2017, 2021)
+ONI_FILE = DATA / "raw" / "oni" / "oni.ascii.txt"   # cópia local do ONI da NOAA CPC
 FRP_SOURCES = {
     "Aqua": ("fire_*_M-C61_*.csv", PLATFORM_PERIODS["Aqua"][0], None),
     "SNPP": ("fire_*_SV-C2_*.csv", *CALIBRATION[("Aqua", "SNPP")]),

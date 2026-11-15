@@ -12,6 +12,7 @@
     python -m firms_harmonize frp-calibrate   # FRP: modelo ln V = a + b ln M + c VZA, validado fora da amostra
     python -m firms_harmonize frp-fuse        # FRP: fusão diária no pixel MODIS → frp_fused.parquet, frp_anual.csv
     python -m firms_harmonize risk-panel      # risco: painel célula 0,5° × mês com histórico e alvo de mês crítico
+    python -m firms_harmonize risk-drivers    # risco: ONI (NOAA CPC) no painel
 """
 from __future__ import annotations
 
@@ -236,11 +237,29 @@ def cmd_risk_panel(args):
     print("  % de meses críticos por mês do ano:", por_mes.to_dict())
 
 
+def cmd_risk_drivers(args):
+    from .config import ONI_FILE, RISK_DIR
+    from .risk.drivers import add_oni, fetch_oni, read_oni
+    if not ONI_FILE.exists():
+        print("Baixando o ONI da NOAA CPC ...", flush=True)
+        fetch_oni(ONI_FILE)
+    oni = read_oni(ONI_FILE)
+    print(f"ONI: {oni['ym_fim'].min()} a {oni['ym_fim'].max()} ({len(oni)} trimestres) em {ONI_FILE}")
+    panel = add_oni(pd.read_parquet(RISK_DIR / "panel.parquet"), oni)
+    panel.to_parquet(RISK_DIR / "panel.parquet", index=False)
+    fase = pd.cut(panel["oni_atual"], [-9, -0.5, 0.5, 9], labels=["La Niña", "neutro", "El Niño"])
+    resumo = panel.groupby(fase, observed=True).agg(linhas=("y_critico", "size"),
+                                                    mes_critico_pct=("y_critico", "mean"))
+    resumo["mes_critico_pct"] = (100 * resumo["mes_critico_pct"]).round(1)
+    print("Mês crítico por fase do ONI no mês t (todos os anos, descritivo):")
+    print(resumo.to_string())
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="firms_harmonize")
     sub = p.add_subparsers(dest="cmd", required=True)
     for name in ["status", "boundary", "fetch-recent", "aggregate", "harmonize", "validate", "all",
-                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse", "risk-panel"]:
+                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse", "risk-panel", "risk-drivers"]:
         sp = sub.add_parser(name)
         sp.add_argument("--res", type=float, default=0.25, help="lado da célula em graus")
         sp.add_argument("--min-conf", default="nominal", choices=["low", "nominal", "high"])
@@ -260,7 +279,7 @@ def main(argv=None):
            "aggregate": cmd_aggregate, "harmonize": cmd_harmonize, "validate": cmd_validate,
            "frp-prepare": cmd_frp_prepare, "frp-match": cmd_frp_match,
            "frp-calibrate": cmd_frp_calibrate, "frp-fuse": cmd_frp_fuse,
-           "risk-panel": cmd_risk_panel}
+           "risk-panel": cmd_risk_panel, "risk-drivers": cmd_risk_drivers}
     if a.cmd == "all":
         for f in (cmd_aggregate, cmd_harmonize, cmd_validate):
             f(a)
