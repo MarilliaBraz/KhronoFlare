@@ -1,0 +1,56 @@
+/* Text of the next-month outlook page (forecast.html). Loaded before i18n.js, which merges window.I18N_EXTRA
+   into its dictionary before the first translation pass. */
+(() => {
+  'use strict';
+  const extra = window.I18N_EXTRA = window.I18N_EXTRA || { en: {}, pt: {} };
+  Object.assign(extra.en, {
+    'fc.title': 'Next-Month Fire Outlook',
+    'fc.subtitle': 'For civil protection planning: where fire tends to appear next month, and where it is burning now.',
+    'fc.back': 'Live alert console',
+    'fc.open': 'Next-month outlook',
+    'fc.loading': 'Loading the outlook…',
+    'fc.kind': 'Outlook for {month} · estimate from fire history {from}–{to} plus NASA FIRMS hotspots of the last 24 h · updated {when}',
+    'fc.kind.noactive': 'Outlook for {month} · estimate from fire history {from}–{to} only: live hotspots were unavailable · updated {when}',
+    'fc.fail': 'The outlook could not be loaded. Try again in a few minutes.',
+    'fc.how': 'How this is calculated',
+    'fc.rule': '<p>The map is split into squares of {res}° (about 55 km). For each square we count in how many years, from {from} to {to}, satellites saw fire in {month}, and the average number of hotspots.</p><ul><li><strong>High</strong>: fire in at least {hs}% of the years and {hm} or more hotspots on average.</li><li><strong>Medium</strong>: fire in at least {ms}% of the years and {mm} or more hotspots on average.</li><li>A square with {am} or more hotspots now (NASA FIRMS, last 24 h) goes up one level.</li></ul><p>Each municipality takes the level of the square where its seat is. This is an estimate from history, not yet the project\'s risk model.</p>',
+    'fc.map.aria': 'Map of next-month fire outlook',
+    'fc.cls.high': 'High', 'fc.cls.medium': 'Medium',
+    'fc.legend.active': 'Burning now (≥ 3 hotspots)',
+    'fc.list.h': 'Priorities', 'fc.csv': 'Download CSV', 'fc.state': 'State', 'fc.allstates': 'All of Brazil',
+    'fc.reason.hist': 'Fire in {y} of {n} years in {month}, {m} hotspots on average',
+    'fc.reason.nohist': 'No fire in {month} in {from}–{to}',
+    'fc.reason.now': '{a} hotspots in the municipality now',
+    'fc.reason.near': '{a} hotspots nearby now',
+    'fc.more': 'Show {n} more',
+    'fc.empty': 'No municipality at this level here.',
+    'fc.stats': '{h} municipalities high, {m} medium · {c} squares on the map',
+    'fc.brazil': 'Brazil',
+    'fc.foot': 'Prototype for NASA Space Apps 2026. Planning aid only: it shows where fire has been frequent and where it is burning now, not a guarantee of where it will happen.',
+  });
+  Object.assign(extra.pt, {
+    'fc.title': 'Previsão de Fogo do Próximo Mês',
+    'fc.subtitle': 'Para o planejamento da Defesa Civil: onde o fogo tende a aparecer no próximo mês e onde está queimando agora.',
+    'fc.back': 'Console de alertas ao vivo',
+    'fc.open': 'Previsão do próximo mês',
+    'fc.loading': 'Carregando a previsão…',
+    'fc.kind': 'Previsão para {month} · estimativa pelo histórico de fogo {from}–{to} e pelos focos do NASA FIRMS das últimas 24 h · atualizada {when}',
+    'fc.kind.noactive': 'Previsão para {month} · estimativa só pelo histórico de fogo {from}–{to}: os focos ao vivo não estavam disponíveis · atualizada {when}',
+    'fc.fail': 'Não foi possível carregar a previsão. Tente de novo em alguns minutos.',
+    'fc.how': 'Como é calculado',
+    'fc.rule': '<p>O mapa é dividido em quadrados de {res}° (cerca de 55 km). Para cada quadrado contamos em quantos anos, de {from} a {to}, os satélites viram fogo em {month}, e a média de focos.</p><ul><li><strong>Alta</strong>: fogo em pelo menos {hs}% dos anos e média de {hm} focos ou mais.</li><li><strong>Média</strong>: fogo em pelo menos {ms}% dos anos e média de {mm} focos ou mais.</li><li>Um quadrado com {am} focos ou mais agora (NASA FIRMS, últimas 24 h) sobe um nível.</li></ul><p>Cada município recebe o nível do quadrado onde fica a sede. É uma estimativa pelo histórico, ainda não o modelo de risco do projeto.</p>',
+    'fc.map.aria': 'Mapa da previsão de fogo do próximo mês',
+    'fc.cls.high': 'Alta', 'fc.cls.medium': 'Média',
+    'fc.legend.active': 'Queimando agora (≥ 3 focos)',
+    'fc.list.h': 'Prioridades', 'fc.csv': 'Baixar CSV', 'fc.state': 'Estado', 'fc.allstates': 'Todo o Brasil',
+    'fc.reason.hist': 'Fogo em {y} de {n} anos em {month}, média de {m} focos',
+    'fc.reason.nohist': 'Sem fogo em {month} em {from}–{to}',
+    'fc.reason.now': '{a} focos no município agora',
+    'fc.reason.near': '{a} focos nas proximidades agora',
+    'fc.more': 'Mostrar mais {n}',
+    'fc.empty': 'Nenhum município neste nível aqui.',
+    'fc.stats': '{h} municípios em alta, {m} em média · {c} quadrados no mapa',
+    'fc.brazil': 'Brasil',
+    'fc.foot': 'Protótipo para o NASA Space Apps 2026. Apoio ao planejamento: mostra onde o fogo foi frequente e onde está queimando agora, sem garantia de onde ele vai acontecer.',
+  });
+})();
