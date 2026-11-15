@@ -404,3 +404,17 @@ details.cap{margin:12px 0 0}
 .leaflet-control-zoom{border:1px solid var(--line)!important}
 .legend{bottom:10px}
 @media (max-width:760px){.maptools{top:auto;bottom:40px}.basemaps button{padding:4px 7px}}
+
+/* places on the map: white text with a dark halo so it reads on any imagery */
+.leaflet-div-icon.place,.leaflet-div-icon.region{background:none;border:0}
+.place{display:flex;align-items:center;gap:4px;white-space:nowrap;pointer-events:none}
+.place .dot{flex:none;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.75)}
+.place.capital .dot{width:9px;height:9px;background:#10161a;box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(0,0,0,.6)}
+.place .nm{color:#fff;font-size:calc(11.5px * var(--fs));font-weight:500;line-height:1;
+  text-shadow:0 0 2px #000,0 0 3px #000,0 1px 3px rgba(0,0,0,.9)}
+.place.capital .nm{font-weight:700;font-size:calc(12.5px * var(--fs))}
+.place.nolabel .nm{display:none}
+.place.seat .dot{width:4px;height:4px;opacity:.85}
+.region{display:grid;place-items:center;pointer-events:none}
+.region span{color:rgba(255,255,255,.88);font-family:var(--font-head);font-stretch:var(--head-width);font-weight:700;font-size:calc(17px * var(--fs));letter-spacing:.06em;
+  text-shadow:0 0 3px #000,0 0 6px rgba(0,0,0,.8);white-space:nowrap}

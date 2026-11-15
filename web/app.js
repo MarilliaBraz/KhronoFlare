@@ -2,7 +2,8 @@
 // Loads data.json (fire detections + candidate municipalities) and runs the alert workflow.
 "use strict";
 
-function main(D) {
+function main(D, C) {
+  const CITIES = C ? C.cities : [];   // [ibge_id, name, uf, lat, lon, capital]; empty if cities.json failed
   const S = {role:'analyst', juris:'PA', filter:'all', sel:null, sound:true, items:{}, log:[], lastCap:null, phone:null, open:{}, phonecap:['phone.none',{}]};
   const BRT = -3;
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -124,16 +125,22 @@ function main(D) {
   const zoomCtl = L.control.zoom({position:'bottomright'}).addTo(map);
   let baseKey = (()=>{ try { return localStorage.getItem('hac-base'); } catch(e){ return null; } })();
   if(!BASES[baseKey]) baseKey='sat';
-  let baseLayer=null, tileErrors=0;
+  let baseLayer=null, tileErrors=0, tileLoads=0;
+  const TILE_RETRIES = 3;
   const lStates=L.layerGroup().addTo(map), lSel=L.layerGroup().addTo(map), lPts=L.layerGroup().addTo(map);
   function setBase(key){
     baseKey=key; try { localStorage.setItem('hac-base', key); } catch(e){}
     if(baseLayer) map.removeLayer(baseLayer);
-    const b=BASES[key]; tileErrors=0;
+    const b=BASES[key]; tileErrors=0; tileLoads=0;
     baseLayer=L.tileLayer(GIBS+b.path, {maxNativeZoom:b.max, maxZoom:11, bounds:BRAZIL.pad(0.6),
       attribution:`<a href="https://earthdata.nasa.gov/gibs" target="_blank" rel="noopener">NASA GIBS</a> ${b.credit} · IBGE`});
-    baseLayer.on('tileerror', ()=>{ if(++tileErrors===4) offline(true); });
-    baseLayer.on('load', ()=>{ if(tileErrors<4) offline(false); });
+    // GIBS sometimes answers 503 under load: retry each tile a few times, spaced out, before giving up.
+    baseLayer.on('tileerror', e=>{
+      const img=e.tile, tries=+(img.dataset.tries||0), src=img.src;
+      if(tries < TILE_RETRIES){ img.dataset.tries=tries+1; setTimeout(()=>{ img.src=''; img.src=src; }, 1500*(tries+1)); return; }
+      if(++tileErrors >= 6 && tileLoads === 0) offline(true);
+    });
+    baseLayer.on('tileload', ()=>{ if(++tileLoads === 1) offline(false); });
     baseLayer.addTo(map).bringToBack();
     document.querySelectorAll('[data-base]').forEach(btn=>btn.setAttribute('aria-pressed', String(btn.dataset.base===key)));
   }
@@ -181,6 +188,40 @@ function main(D) {
     zi.title=t('map.zoomin'); zi.setAttribute('aria-label', t('map.zoomin')); zo.title=t('map.zoomout-btn'); zo.setAttribute('aria-label', t('map.zoomout-btn'));
   }
   document.querySelectorAll('[data-base]').forEach(btn=>btn.addEventListener('click', ()=>setBase(btn.dataset.base)));
+
+  /* ---------- places on the map: region names, capitals, municipal seats ---------- */
+  // Regions are named on the country view; capitals always; other seats appear once zoomed to a state.
+  // Labels are placed greedily (capitals first) and skipped where they would overlap.
+  const REGION_LABELS = {North:[-3.5,-61], Northeast:[-7.5,-40.5], 'Central-West':[-14.5,-53.5], Southeast:[-20.5,-45], South:[-27.5,-52]};
+  const CITY_ZOOM = 6, REGION_MAX_ZOOM = 5.25, MAX_SEATS = 600;
+  map.createPane('places'); map.getPane('places').style.zIndex = 450; map.getPane('places').style.pointerEvents = 'none';
+  const lPlaces = L.layerGroup().addTo(map);
+  const capitals = CITIES.filter(c=>c[5]===1), seats = CITIES.filter(c=>c[5]!==1);
+  const placeIcon = (name, cls, w) => L.divIcon({className:'place '+cls, iconSize:[w,16], iconAnchor:[5,8], html:`<span class="dot"></span><span class="nm">${esc(name)}</span>`});
+  function drawPlaces(){
+    lPlaces.clearLayers();
+    const z = map.getZoom(), view = map.getBounds().pad(0.05), taken = [];
+    const charW = 6.6 * (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fs')) || 1);
+    const fits = (pt, w) => { const box=[pt.x-6, pt.y-9, pt.x+w, pt.y+9];
+      if(taken.some(b=>box[0]<b[2] && box[2]>b[0] && box[1]<b[3] && box[3]>b[1])) return false; taken.push(box); return true; };
+    const place = (lat, lon, name, cls, labelled) => {
+      const w = labelled ? Math.round(name.length*charW)+14 : 10;
+      const pt = map.latLngToContainerPoint([lat, lon]);
+      const show = labelled && fits(pt, w);
+      L.marker([lat, lon], {pane:'places', interactive:false, keyboard:false,
+        icon: placeIcon(show ? name : '', cls + (show ? '' : ' nolabel'), show ? w : 10)}).addTo(lPlaces);
+    };
+    if(z <= REGION_MAX_ZOOM) Object.entries(REGION_LABELS).forEach(([k,[lat,lon]])=>{
+      L.marker([lat,lon], {pane:'places', interactive:false, keyboard:false, icon:L.divIcon({className:'region', iconSize:[160,24], iconAnchor:[80,12], html:`<span>${t('region.'+k)}</span>`})}).addTo(lPlaces);
+      const pt=map.latLngToContainerPoint([lat,lon]); taken.push([pt.x-80, pt.y-12, pt.x+80, pt.y+12]);
+    });
+    capitals.forEach(c=>{ if(view.contains([c[3],c[4]])) place(c[3], c[4], c[1], 'capital', true); });
+    if(z >= CITY_ZOOM){
+      const inView = seats.filter(c=>view.contains([c[3],c[4]]));
+      inView.slice(0, MAX_SEATS).forEach(c=>place(c[3], c[4], c[1], 'seat', z >= CITY_ZOOM + 1 || inView.length <= 120));
+    }
+  }
+  map.on('zoomend moveend', drawPlaces);
 
   /* ---------- side panel ---------- */
   function renderSide(){
@@ -444,15 +485,16 @@ function main(D) {
   const inBr=D.points.filter(p=>p.uf).length;
   const renderMapStats = () => { document.getElementById('mapstats').textContent = t('map.stats',{n:fmtInt(inBr), m:D.cands.length, o:fmtInt(D.points.length-inBr)}); };
   // Everything drawn by this file is redrawn when the interface language changes; an open dialog is closed.
-  function renderTexts(){ renderJuris(); renderSound(); renderPhoneCap(); renderMapStats(); renderMapTitle(); renderQueue(); renderSide(); renderLog(); renderPhoneClock(); renderMapControls(); drawPoints(); }
+  function renderTexts(){ renderJuris(); renderSound(); renderPhoneCap(); renderMapStats(); renderMapTitle(); renderQueue(); renderSide(); renderLog(); renderPhoneClock(); renderMapControls(); drawPoints(); drawPlaces(); }
   I18N.onChange(()=>{ if(!document.getElementById('sheet').hidden) closeSheet(); renderTexts(); });
   buildMap(); renderTexts(); setInterval(renderPhoneClock, 15000);
   select((D.cands.find(c=>c.uf===S.juris)||D.cands[0]).id);
 }
 
-fetch('data.json')
-  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-  .then(main)
+const getJson = url => fetch(url).then(r => { if (!r.ok) throw new Error(url + ': HTTP ' + r.status); return r.json(); });
+// cities.json is optional: without it the map simply has no place names.
+Promise.all([getJson('data.json'), getJson('cities.json').catch(err => { console.warn(err); return null; })])
+  .then(([data, cities]) => main(data, cities))
   .catch(err => {
     const box = document.getElementById('side');
     box.innerHTML = '<div class="phead"><h2>' + I18N.t('load.h') + '</h2></div>' +
