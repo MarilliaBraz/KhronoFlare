@@ -4,7 +4,11 @@
 (function () {
   const NTFY = 'https://ntfy.sh';
   const $ = id => document.getElementById(id);
-  const LABEL = { extreme: 'Extreme alert', severe: 'Severe alert', cancel: 'Alert cancelled', test: 'Test message' };
+  const t = (k, v) => I18N.t(k, v);
+  const label = kind => t('pop.' + kind);
+  // History and connection state keep raw values so they can be redrawn in another language.
+  const received = [];
+  let stateKey = 'ph.connecting', stateCls = '';
 
   let es = null, actx = null, siren = null, wakeLock = null;
 
@@ -68,7 +72,7 @@
     const kind = kindOf(msg.tags);
     const box = $('alert');
     box.className = 'alert ' + (kind === 'extreme' ? '' : kind);
-    $('al-title').textContent = LABEL[kind];
+    $('al-title').textContent = label(kind); box.dataset.kind = kind;
     $('al-place').textContent = placeOf(msg.title);
     $('al-msg').textContent = msg.message || '';
     box.hidden = false;
@@ -76,26 +80,28 @@
     playSiren(kind);
     addHistory(kind, msg);
   }
-  function addHistory(kind, msg) {
+  function addHistory(kind, msg) { received.unshift({ kind, msg }); renderHistory(); }
+  function renderHistory() {
     const list = $('hist');
-    const none = list.querySelector('.none'); if (none) none.remove();
-    const li = document.createElement('li');
-    li.className = kind;
-    const time = new Date((msg.time || Date.now() / 1000) * 1000).toLocaleTimeString();
-    const t = document.createElement('div'); t.className = 't'; t.textContent = `${time} · ${LABEL[kind]}`;
-    const p = document.createElement('div'); p.textContent = placeOf(msg.title) || (msg.message || '').slice(0, 80);
-    li.append(t, p);
-    list.prepend(li);
+    list.replaceChildren();
+    if (!received.length) { const li = document.createElement('li'); li.className = 'none'; li.textContent = t('ph.none'); list.append(li); return; }
+    received.forEach(({ kind, msg }) => {
+      const li = document.createElement('li'); li.className = kind;
+      const time = new Date((msg.time || Date.now() / 1000) * 1000).toLocaleTimeString(I18N.locale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const head = document.createElement('div'); head.className = 't'; head.textContent = `${time}, ${label(kind)}`;
+      const p = document.createElement('div'); p.textContent = placeOf(msg.title) || (msg.message || '').slice(0, 80);
+      li.append(head, p); list.append(li);
+    });
   }
   $('al-ok').addEventListener('click', () => { stopSiren(); $('alert').hidden = true; });
 
   /* ---------- connection ---------- */
-  function setState(text, cls) { $('state').textContent = text; $('statebox').className = 'state ' + (cls || ''); }
+  function setState(key, cls) { stateKey = key; stateCls = cls || ''; $('state').textContent = t(key); $('statebox').className = 'state ' + stateCls; }
   function connect(topic) {
     disconnect();
     es = new EventSource(`${NTFY}/${encodeURIComponent(topic)}/sse`);
-    es.onopen = () => setState('Connected. Waiting for alerts.', 'live');
-    es.onerror = () => setState('Connection lost. Reconnecting…', 'retry');
+    es.onopen = () => setState('ph.connected', 'live');
+    es.onerror = () => setState('ph.lost', 'retry');
     es.onmessage = ev => {
       let msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
       if (msg.event === 'message') show(msg);
@@ -105,13 +111,13 @@
 
   $('start').addEventListener('click', () => {
     const topic = $('topic').value.trim();
-    if (!/^[A-Za-z0-9_-]{1,64}$/.test(topic)) { $('topic').focus(); $('topic').setCustomValidity('Use the channel name shown in the console'); $('topic').reportValidity(); return; }
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(topic)) { $('topic').focus(); $('topic').setCustomValidity(t('ph.invalid')); $('topic').reportValidity(); return; }
     $('topic').setCustomValidity('');
     unlockAudio(); keepAwake();
     if (navigator.vibrate) navigator.vibrate(60);
     $('ch').textContent = topic; $('ch2').textContent = topic;
     $('setup').hidden = true; $('live').hidden = false;
-    setState('Connecting…');
+    setState('ph.connecting');
     connect(topic);
     try { history.replaceState(null, '', '?t=' + encodeURIComponent(topic)); } catch (e) { /* ignore */ }
   });
@@ -120,5 +126,13 @@
     if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
     $('live').hidden = true; $('setup').hidden = false;
   });
-  if ($('topic').value) $('ch2').textContent = $('topic').value;
+  const channelName = () => $('topic').value.trim() || t('ph.your-channel');
+  function renderTexts() {
+    setState(stateKey, stateCls);
+    renderHistory();
+    if (!$('alert').hidden && $('alert').dataset.kind) $('al-title').textContent = label($('alert').dataset.kind);
+    if ($('live').hidden) $('ch2').textContent = channelName();
+  }
+  I18N.onChange(renderTexts);
+  renderTexts();
 })();

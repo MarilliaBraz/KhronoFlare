@@ -119,6 +119,17 @@
       'howto.ok': 'Got it',
       'load.h': 'Could not load data.json',
       'load.p': 'Open this page through a web server (for example <code>python -m http.server</code> in this folder, or GitHub Pages). Browsers block reading local files when the page is opened directly from disk.',
+      // phone.html (alert receiver)
+      'ph.title': 'Alert receiver', 'ph.sub': 'Simulated phone for the Hotspot Alert Console, NASA Space Apps 2026',
+      'ph.connect': 'Connect', 'ph.channel': 'Channel', 'ph.start': 'Start receiving alerts',
+      'ph.start-hint': 'The tap lets this page play the siren and vibrate. Keep the page open and the screen on.',
+      'ph.connecting': 'Connecting…', 'ph.connected': 'Connected. Waiting for alerts.', 'ph.lost': 'Connection lost. Reconnecting…',
+      'ph.live-hint': 'When an alert is approved in the console, it shows up here.', 'ph.stop': 'Disconnect',
+      'ph.received': 'Received', 'ph.none': 'Nothing yet.', 'ph.app-h': 'Also as a system notification',
+      'ph.app1': 'Install the free ntfy app (Android or iOS), tap <b>+</b> and subscribe to',
+      'ph.app2': 'on ntfy.sh. Approved alerts then also arrive as notifications, even with this page closed.',
+      'ph.your-channel': 'your channel', 'ph.invalid': 'Use the channel name shown in the console',
+      'single.note': 'The real-phone link uses ntfy.sh and works in the folder version of this project (run it locally or on GitHub Pages). Here, use the Phone preview tab.',
       // dynamic text: ntfy.js
       'rp.qr-add': 'Add the page address below', 'rp.qr-none': 'QR code unavailable', 'rp.link-none': '(set the page address first)',
       'rp.s.none': 'Nothing sent yet.', 'rp.s.sending': 'Sending to the phone channel…',
@@ -157,7 +168,7 @@
       'rp.n2': 'Nessa página, toque em <strong>Subscribe</strong> e permita as notificações. Para um alerta mais forte, instale o app gratuito ntfy e assine o canal',
       'rp.n3': 'Aperte <strong>Enviar teste</strong> aqui para conferir se chega',
       'rp.p1': 'Leia o código com a câmera do celular',
-      'rp.p2': 'No celular, toque em <strong>Start receiving alerts</strong>',
+      'rp.p2': 'No celular, toque em <strong>Começar a receber alertas</strong> (ou <strong>Start receiving alerts</strong>, em inglês)',
       'rp.basewarn': 'A página em tela cheia precisa de um endereço que o celular consiga abrir, como o link do GitHub Pages do projeto. <code>localhost</code> só existe neste computador.',
       'rp.test': 'Enviar teste', 'rp.copy': 'Copiar link',
       'rp.on': 'Enviar alertas aprovados para celulares de verdade',
@@ -242,6 +253,17 @@
       'howto.ok': 'Entendi',
       'load.h': 'Não foi possível carregar o data.json',
       'load.p': 'Abra esta página por um servidor web (por exemplo <code>python -m http.server</code> nesta pasta, ou o GitHub Pages). Os navegadores bloqueiam a leitura de arquivos locais quando a página é aberta direto do disco.',
+      // phone.html (receptor de alertas)
+      'ph.title': 'Receptor de alertas', 'ph.sub': 'Celular simulado do Console de Alerta de Focos, NASA Space Apps 2026',
+      'ph.connect': 'Conectar', 'ph.channel': 'Canal', 'ph.start': 'Começar a receber alertas',
+      'ph.start-hint': 'O toque libera a sirene e a vibração nesta página. Deixe a página aberta e a tela ligada.',
+      'ph.connecting': 'Conectando…', 'ph.connected': 'Conectado. Aguardando alertas.', 'ph.lost': 'Conexão perdida. Reconectando…',
+      'ph.live-hint': 'Quando um alerta é aprovado no console, ele aparece aqui.', 'ph.stop': 'Desconectar',
+      'ph.received': 'Recebidos', 'ph.none': 'Nada ainda.', 'ph.app-h': 'Também como notificação do sistema',
+      'ph.app1': 'Instale o app gratuito ntfy (Android ou iOS), toque em <b>+</b> e assine',
+      'ph.app2': 'no ntfy.sh. Assim os alertas aprovados chegam também como notificação, mesmo com esta página fechada.',
+      'ph.your-channel': 'seu canal', 'ph.invalid': 'Use o nome do canal mostrado no console',
+      'single.note': 'O link para o celular de verdade usa o ntfy.sh e funciona na versão em pasta do projeto (rodando localmente ou no GitHub Pages). Aqui, use a aba Prévia no celular.',
       // texto dinâmico: ntfy.js
       'rp.qr-add': 'Informe o endereço da página abaixo', 'rp.qr-none': 'QR code indisponível', 'rp.link-none': '(informe antes o endereço da página)',
       'rp.s.none': 'Nada enviado ainda.', 'rp.s.sending': 'Enviando para o canal do celular…',
@@ -273,7 +295,7 @@
       e.dataset.i18nAttr.split(';').forEach(pair => { const [attr, key] = pair.split(':'); e.setAttribute(attr, t(key)); });
     });
     document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
-    document.title = t('title');
+    document.title = t(document.documentElement.dataset.i18nTitle || 'title');
     document.querySelectorAll('[data-lang]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
   }
 
