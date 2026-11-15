@@ -251,3 +251,44 @@ def test_parse_psl_rejects_repeated_month():
     row = " 2010  " + "  0.10" * 12 + "\n"
     with pytest.raises(ValueError, match="repetido"):
         parse_psl(row + row, "TNA")
+
+# ---------- robustez ----------
+
+def _garbage_shapefile_zip(path):
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("a.shp", b"lixo")
+        z.writestr("a.dbf", b"lixo")
+    return path
+
+
+def test_read_biomes_turns_corrupt_shapefile_into_value_error(tmp_path):
+    with pytest.raises(ValueError, match="inválido"):
+        read_biomes(_garbage_shapefile_zip(tmp_path / "corrompido.zip"))
+
+
+def test_fetch_biomes_never_leaves_partial_file(tmp_path):
+    content = _garbage_shapefile_zip(tmp_path / "src.zip").read_bytes()
+
+    class Resp:
+        status_code, content_ = 200, None
+        def __init__(self, c): self.content = c
+        def raise_for_status(self): pass
+
+    class Sess:
+        def get(self, url, timeout): return Resp(content)
+
+    dest = tmp_path / "out" / "Biomas_5000mil.zip"
+    with pytest.raises(ValueError):
+        fetch_biomes(dest, session=Sess())
+    assert not dest.exists() and not list(dest.parent.glob("*.part"))
+
+
+def test_parse_psl_reads_an_incomplete_current_year():
+    text = "  2025  2026\n 2025" + "  0.10" * 12 + "\n 2026  0.20  0.30  0.40\n  -99.99\n"
+    s = parse_psl(text, "TNA").set_index("ym")["valor"]
+    assert str(s.index.max()) == "2026-03" and len(s) == 15
+
+
+def test_parse_psl_reports_non_numeric_values_with_the_index_name():
+    with pytest.raises(ValueError, match="TNA"):
+        parse_psl("  2025  2026\n 2025  0.10  abc\n", "TNA")

@@ -27,6 +27,7 @@ BASE_FEATURES = [*FEATURES, *[f"bioma_{c}" for c in BIOME_CODES]]
 ONI_FEATURES = [*BASE_FEATURES, "oni_atual", "oni_3m"]
 TARGET = "y_critico"
 MIN_SAMPLES_LEAF = 20
+REQUIRED = ["ano_alvo", "bioma", "frp_p75", "frp_lag0", "p_fogo", "cy", "cx"]  # usados fora das variáveis
 
 # Grupos para a importância por permutação (passo 5): variáveis correlacionadas são embaralhadas juntas.
 FEATURE_GROUPS = {
@@ -58,8 +59,20 @@ def evaluate(y, score) -> dict:
     }
 
 
+def positive_proba(model: RandomForestClassifier, x: pd.DataFrame) -> np.ndarray:
+    """Probabilidade da classe 1; funciona mesmo se o modelo só viu uma classe no treino."""
+    if len(x) == 0:
+        raise ValueError("conjunto de previsão vazio")
+    classes = list(model.classes_)
+    if 1 not in classes:
+        return np.zeros(len(x))
+    if classes == [1]:
+        return np.ones(len(x))
+    return model.predict_proba(x)[:, classes.index(1)]
+
+
 def _check(panel: pd.DataFrame, features: list[str]) -> None:
-    missing = [c for c in [*features, TARGET] if c not in panel.columns]
+    missing = [c for c in dict.fromkeys([*features, TARGET, *REQUIRED]) if c not in panel.columns]
     if missing:
         raise ValueError(f"painel sem as variáveis {missing}")
 
@@ -93,7 +106,7 @@ def temporal_validation(panel: pd.DataFrame, features: list[str], train_years: t
     model = fit_model(panel, features, train_years, n_estimators, seed)
     tr = panel[panel["ano_alvo"].between(*train_years)]
     te = panel[panel["ano_alvo"].between(*test_years)]
-    p = model.predict_proba(te[features])[:, 1]
+    p = positive_proba(model, te[features])
     y = te[TARGET].to_numpy()
     return {
         "variaveis": list(features),
@@ -151,7 +164,7 @@ def spatial_validation(panel: pd.DataFrame, features: list[str], train_years: tu
     for i, (train_mask, test_mask) in enumerate(spatial_folds(panel, block_deg, res, n_folds, seed)):
         tr, te = panel[train_mask & in_train], panel[test_mask & in_test]
         model = make_model(n_estimators, seed).fit(tr[features], tr[TARGET])
-        pred[test_mask & in_test] = model.predict_proba(te[features])[:, 1]
+        pred[test_mask & in_test] = positive_proba(model, te[features])
         groups.append({"grupo": i, "celulas": int(te[["cy", "cx"]].drop_duplicates().shape[0]),
                        **evaluate(te[TARGET], pred[test_mask & in_test])})
     te_all = panel[in_test]
@@ -170,7 +183,7 @@ def grouped_permutation_importance(model: RandomForestClassifier, test: pd.DataF
     """Queda média do ROC-AUC no teste ao embaralhar juntas as colunas de cada grupo (não altera `test`)."""
     x = test[features].to_numpy(dtype=float)
     y = test[TARGET].to_numpy()
-    base = roc_auc_score(y, model.predict_proba(pd.DataFrame(x, columns=features))[:, 1])
+    base = roc_auc_score(y, positive_proba(model, pd.DataFrame(x, columns=features)))
     rng = np.random.default_rng(seed)
     rows = {}
     for name, cols in groups.items():
@@ -179,7 +192,7 @@ def grouped_permutation_importance(model: RandomForestClassifier, test: pd.DataF
         for _ in range(n_repeats):
             shuffled = x.copy()
             shuffled[:, idx] = x[rng.permutation(len(x))][:, idx]
-            auc = roc_auc_score(y, model.predict_proba(pd.DataFrame(shuffled, columns=features))[:, 1])
+            auc = roc_auc_score(y, positive_proba(model, pd.DataFrame(shuffled, columns=features)))
             drops.append(base - auc)
         rows[name] = {"queda_auc": float(np.mean(drops)), "desvio": float(np.std(drops))}
     return pd.DataFrame(rows).T.sort_values("queda_auc", ascending=False)

@@ -132,3 +132,32 @@ def test_map_month_uses_fire_known_at_prediction_time_not_the_label():
     assert choose_map_month(test) == pd.Period("2019-09", "M")    # alvo do mês com maior ΣFRP em t
     flipped = test.assign(y_critico=1 - test["y_critico"])
     assert choose_map_month(flipped) == pd.Period("2019-09", "M")  # o rótulo não muda a escolha
+
+# ---------- robustez ----------
+
+from sklearn.ensemble import RandomForestClassifier
+
+from firms_harmonize.risk.model import positive_proba
+
+
+def test_positive_proba_handles_models_that_saw_a_single_class():
+    x = pd.DataFrame({"a": [0.0, 1.0, 2.0]})
+    only_zero = RandomForestClassifier(n_estimators=3, random_state=0).fit(x, [0, 0, 0])
+    only_one = RandomForestClassifier(n_estimators=3, random_state=0).fit(x, [1, 1, 1])
+    both = RandomForestClassifier(n_estimators=3, random_state=0).fit(x, [0, 1, 1])
+    assert positive_proba(only_zero, x).tolist() == [0.0, 0.0, 0.0]
+    assert positive_proba(only_one, x).tolist() == [1.0, 1.0, 1.0]
+    assert positive_proba(both, x).shape == (3,)
+
+
+def test_positive_proba_rejects_empty_input():
+    x = pd.DataFrame({"a": [0.0, 1.0]})
+    model = RandomForestClassifier(n_estimators=3, random_state=0).fit(x, [0, 1])
+    with pytest.raises(ValueError, match="vazio"):
+        positive_proba(model, x.iloc[:0])
+
+
+@pytest.mark.parametrize("col", ["bioma", "ano_alvo", "frp_p75", "frp_lag0", "p_fogo"])
+def test_validation_checks_every_used_column_before_training(col):
+    with pytest.raises(ValueError, match=col):
+        temporal_validation(_panel().drop(columns=[col]), BASE_FEATURES, TRAIN, TEST, n_estimators=5)

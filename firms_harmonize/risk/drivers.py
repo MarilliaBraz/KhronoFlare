@@ -12,6 +12,7 @@ entram; cada célula recebe o bioma do seu centro ou, se o centro cair fora (mar
 from __future__ import annotations
 
 import io
+import struct
 import zipfile
 from pathlib import Path
 
@@ -90,16 +91,30 @@ TNA_URL = "https://psl.noaa.gov/data/correlation/tna.data"
 _PSL_MISSING = -90.0  # a PSL marca meses sem dado com -99.99
 
 
+def _psl_year_line(parts: list[str]) -> bool:
+    return 2 <= len(parts) <= 13 and len(parts[0]) == 4 and parts[0].isdigit()
+
+
 def parse_psl(text: str, label: str) -> pd.DataFrame:
-    """Formato PSL (linha "ano v1 … v12", cabeçalho e rodapé livres) → DataFrame (ym, valor)."""
+    """Formato PSL → DataFrame (ym, valor).
+
+    A 1ª linha "ano_inicial ano_final" é cabeçalho; depois, "ano v1 … vN" com até 12 meses (o ano
+    corrente pode vir incompleto); o rodapé (marcador de ausência, nome do índice) é ignorado.
+    """
     rows = []
-    for line in text.splitlines():
+    lines = text.splitlines()
+    header = lines[0].split() if lines else []
+    start = 1 if len(header) == 2 and all(h.isdigit() for h in header) else 0
+    for line in lines[start:]:
         parts = line.split()
-        if len(parts) != 13 or not parts[0].isdigit():
+        if not _psl_year_line(parts):
             continue
         year = int(parts[0])
         for month, value in enumerate(parts[1:], start=1):
-            v = float(value)
+            try:
+                v = float(value)
+            except ValueError:
+                raise ValueError(f"arquivo {label}: valor não numérico {value!r} em {year}-{month:02d}") from None
             if v > _PSL_MISSING:
                 rows.append((pd.Period(year=year, month=month, freq="M"), v))
     if not rows:
@@ -149,19 +164,26 @@ def read_biomes(zip_path: Path) -> dict:
         bases = [n[:-4] for n in z.namelist() if n.lower().endswith(".shp")]
         if not bases:
             raise ValueError("zip de biomas sem arquivo .shp")
-        reader = shapefile.Reader(shp=io.BytesIO(z.read(bases[0] + ".shp")),
-                                  dbf=io.BytesIO(z.read(bases[0] + ".dbf")), encoding="latin-1")
-    fields = [f[0] for f in reader.fields[1:]]
-    if "COD_BIOMA" not in fields:
-        raise ValueError(f"shapefile de biomas sem o campo COD_BIOMA: {fields}")
+        try:
+            features = _read_shapefile(z.read(bases[0] + ".shp"), z.read(bases[0] + ".dbf"))
+        except (KeyError, struct.error, shapefile.ShapefileException) as e:
+            raise ValueError(f"shapefile de biomas inválido: {e}") from None
     out = {}
-    for rec, shp in zip(reader.records(), reader.shapes()):
-        code = str(rec["COD_BIOMA"]).strip()
-        if code in BIOME_CODES:
-            out[code] = shapely.make_valid(shape(shp.__geo_interface__))
+    for code, geom in features:
+        if code in BIOME_CODES:   # mais de uma feição com o mesmo código vira uma só geometria
+            out[code] = shapely.union(out[code], geom) if code in out else geom
     if not out:
         raise ValueError("shapefile sem nenhum bioma terrestre conhecido")
     return out
+
+
+def _read_shapefile(shp: bytes, dbf: bytes) -> list[tuple[str, object]]:
+    with shapefile.Reader(shp=io.BytesIO(shp), dbf=io.BytesIO(dbf), encoding="latin-1") as reader:
+        fields = [f[0] for f in reader.fields[1:]]
+        if "COD_BIOMA" not in fields:
+            raise ValueError(f"shapefile de biomas sem o campo COD_BIOMA: {fields}")
+        return [(str(rec["COD_BIOMA"]).strip(), shapely.make_valid(shape(shp_.__geo_interface__)))
+                for rec, shp_ in zip(reader.records(), reader.shapes())]
 
 
 def fetch_biomes(dest: Path, session: requests.Session | None = None, url: str = BIOMES_URL,
@@ -172,13 +194,12 @@ def fetch_biomes(dest: Path, session: requests.Session | None = None, url: str =
     dest = Path(dest)
     tmp = dest.with_suffix(".part")
     tmp.parent.mkdir(parents=True, exist_ok=True)
-    tmp.write_bytes(r.content)
     try:
+        tmp.write_bytes(r.content)
         read_biomes(tmp)
-    except ValueError:
-        tmp.unlink()
-        raise
-    tmp.replace(dest)
+        tmp.replace(dest)
+    finally:
+        tmp.unlink(missing_ok=True)   # nunca deixa o .part, qualquer que seja o erro
     return dest
 
 
