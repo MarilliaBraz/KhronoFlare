@@ -129,6 +129,7 @@
       'ph.app1': 'Install the free ntfy app (Android or iOS), tap <b>+</b> and subscribe to',
       'ph.app2': 'on ntfy.sh. Approved alerts then also arrive as notifications, even with this page closed.',
       'ph.your-channel': 'your channel', 'ph.invalid': 'Use the channel name shown in the console',
+      'single.note': 'The real-phone link uses ntfy.sh and works in the folder version of this project (run it locally or on GitHub Pages). Here, use the Phone preview tab.',
       // dynamic text: ntfy.js
       'rp.qr-add': 'Add the page address below', 'rp.qr-none': 'QR code unavailable', 'rp.link-none': '(set the page address first)',
       'rp.s.none': 'Nothing sent yet.', 'rp.s.sending': 'Sending to the phone channel…',
@@ -262,6 +263,7 @@
       'ph.app1': 'Instale o app gratuito ntfy (Android ou iOS), toque em <b>+</b> e assine',
       'ph.app2': 'no ntfy.sh. Assim os alertas aprovados chegam também como notificação, mesmo com esta página fechada.',
       'ph.your-channel': 'seu canal', 'ph.invalid': 'Use o nome do canal mostrado no console',
+      'single.note': 'O link para o celular de verdade usa o ntfy.sh e funciona na versão em pasta do projeto (rodando localmente ou no GitHub Pages). Aqui, use a aba Prévia no celular.',
       // texto dinâmico: ntfy.js
       'rp.qr-add': 'Informe o endereço da página abaixo', 'rp.qr-none': 'QR code indisponível', 'rp.link-none': '(informe antes o endereço da página)',
       'rp.s.none': 'Nada enviado ainda.', 'rp.s.sending': 'Enviando para o canal do celular…',
