@@ -1,8 +1,8 @@
 """Saídas do modelo de mês crítico para o pitch (passo 6).
 
 Treina o modelo principal (sem índice climático) nos anos-alvo 2004–2016, prevê 2017–2021 e gera:
-  * risco_mes_critico_mapa.png: risco previsto × meses críticos observados no mês de teste com mais
-    células críticas (escolhido pelos dados);
+  * risco_mes_critico_mapa.png: risco previsto × meses críticos observados no mês-alvo de pico (ago–out)
+    com maior ΣFRP no mês anterior, informação disponível na hora da previsão (o resultado não entra);
   * risco_mes_critico_desempenho.png: ROC-AUC por bioma (modelo × referências) e importância por grupo;
   * risco_mes_critico.json: os números dos dois gráficos.
 
@@ -31,10 +31,9 @@ from firms_harmonize import geo  # noqa: E402
 from firms_harmonize.config import (BOUNDARY, RISK_DIR, RISK_RES, RISK_TEST_YEARS,  # noqa: E402
                                     RISK_TRAIN_YEARS)
 from firms_harmonize.risk.drivers import BIOME_CODES  # noqa: E402
-from firms_harmonize.risk.model import BASE_FEATURES, evaluate, fit_model  # noqa: E402
+from firms_harmonize.risk.model import BASE_FEATURES, choose_map_month, evaluate, fit_model  # noqa: E402
 
 SAIDA = Path(__file__).resolve().parent
-MESES_PICO = (8, 9, 10)
 
 # Paleta validada (categórica: azul, laranja, verde-água; o verde-água exige rótulos visíveis).
 AZUL, LARANJA, VERDE = "#2a78d6", "#eb6834", "#1baf7a"
@@ -59,12 +58,6 @@ def prever(panel: pd.DataFrame) -> pd.DataFrame:
     test = panel[panel["ano_alvo"].between(*RISK_TEST_YEARS)].copy()
     test["prob"] = model.predict_proba(test[BASE_FEATURES])[:, 1]
     return test
-
-
-def escolher_mes(test: pd.DataFrame) -> pd.Period:
-    pico = test[test["mes_alvo"].isin(MESES_PICO)]
-    contagem = pico.assign(alvo=pico["ym"] + 1).groupby("alvo")["y_critico"].sum()
-    return contagem.idxmax()
 
 
 def desempenho_por_bioma(test: pd.DataFrame) -> pd.DataFrame:
@@ -93,7 +86,7 @@ def _contorno(ax, contorno) -> None:
         ax.plot(x, y, color=TEXTO_2, lw=0.6)
 
 
-def mapa(test: pd.DataFrame, mes: pd.Period, destino: Path) -> dict:
+def mapa(test: pd.DataFrame, mes: pd.Period, destino: Path, auc_teste: float) -> dict:
     sel = test[(test["ym"] + 1) == mes]
     contorno = geo.load_boundary(BOUNDARY) if BOUNDARY.exists() else None
     fig, axes = plt.subplots(1, 2, figsize=(12, 6.2), facecolor=SUPERFICIE)
@@ -120,12 +113,14 @@ def mapa(test: pd.DataFrame, mes: pd.Period, destino: Path) -> dict:
                    labels=["mês crítico", "normal"], frameon=False, loc="lower left", fontsize=9)
     y_mes, p_mes = sel["y_critico"].to_numpy(), sel["prob"].to_numpy()
     m = evaluate(y_mes, p_mes)
-    fig.suptitle(f"Brasil, {mes.strftime('%m/%Y')}: previsão feita com dados até {(mes - 1).strftime('%m/%Y')} "
-                 f"· ROC-AUC do mês {_br(m['roc_auc'])}", color=TEXTO, x=0.01, ha="left", fontsize=13)
+    fig.suptitle(f"Brasil, {mes.strftime('%m/%Y')}: previsão feita com dados até {(mes - 1).strftime('%m/%Y')}\n"
+                 f"ROC-AUC deste mês {_br(m['roc_auc'])} · média do teste 2017–2021 {_br(auc_teste)} "
+                 "· mês escolhido pelo maior ΣFRP no mês anterior", color=TEXTO, x=0.01, ha="left", fontsize=12)
     fig.tight_layout()
     fig.savefig(destino, dpi=150, facecolor=SUPERFICIE)
     plt.close(fig)
-    return {"mes": str(mes), "celulas": int(len(sel)), "criticas": int(y_mes.sum()), **m}
+    return {"mes": str(mes), "criterio": "mês-alvo de pico (ago–out) com maior ΣFRP no mês anterior",
+            "celulas": int(len(sel)), "criticas": int(y_mes.sum()), **m}
 
 
 def grafico_desempenho(tab: pd.DataFrame, importancia: dict, destino: Path) -> None:
@@ -176,8 +171,9 @@ def main() -> None:
     importancia = json.loads((RISK_DIR / "importancia.json").read_text())
     print("Treinando o modelo principal e prevendo 2017–2021 ...", flush=True)
     test = prever(panel)
-    mes = escolher_mes(test)
-    resumo_mapa = mapa(test, mes, SAIDA / "risco_mes_critico_mapa.png")
+    mes = choose_map_month(test)
+    auc_teste = evaluate(test["y_critico"], test["prob"])["roc_auc"]
+    resumo_mapa = mapa(test, mes, SAIDA / "risco_mes_critico_mapa.png", auc_teste)
     tab = desempenho_por_bioma(test)
     grafico_desempenho(tab, importancia, SAIDA / "risco_mes_critico_desempenho.png")
     saida = {"modelo": "Random Forest sem índice climático", "treino": list(RISK_TRAIN_YEARS),

@@ -1,7 +1,8 @@
 """Modelo de mês crítico e validação (passo 4).
 
-Random Forest sobre o painel (histórico, climatologia, posição, sazonalidade, bioma e, no modelo
-escolhido, ONI). Duas validações:
+Random Forest sobre o painel: histórico, climatologia, posição, sazonalidade e bioma
+(`BASE_FEATURES`, modelo principal). `ONI_FEATURES` acrescenta o ONI e foi testada sem ganho
+(ROC-AUC temporal 0,701 contra 0,708); fica como comparação. Duas validações:
 
   * temporal: treino nos anos-alvo 2004–2016, teste em 2017–2021;
   * espacial: blocos de `block_deg` graus repartidos em grupos; cada grupo sai do treino e é avaliado
@@ -106,6 +107,16 @@ def temporal_validation(panel: pd.DataFrame, features: list[str], train_years: t
             "por_tipo": _by(_kind(te), y, p),
         },
     }
+
+
+def choose_map_month(test: pd.DataFrame, peak_months: tuple[int, ...] = (8, 9, 10)) -> pd.Period:
+    """Mês-alvo do mapa: entre os meses de pico, o de maior ΣFRP no mês t (conhecido na hora da previsão).
+
+    Não usa o rótulo: escolher pelo número de meses críticos observados favoreceria o modelo no mapa.
+    """
+    peak = test[test["mes_alvo"].isin(peak_months)]
+    return (peak.assign(alvo=pd.PeriodIndex(peak["ym"], freq="M") + 1)
+            .groupby("alvo")["frp_lag0"].sum().idxmax())
 
 
 def _blocks(panel: pd.DataFrame, block_deg: float, res: float) -> np.ndarray:

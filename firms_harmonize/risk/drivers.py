@@ -83,7 +83,8 @@ def add_oni(panel: pd.DataFrame, oni: pd.DataFrame) -> pd.DataFrame:
 # ---------- TNA (Tropical Northern Atlantic, NOAA PSL) ----------
 # Anomalia da temperatura do mar em 5,5°N–23,5°N, 15°W–57,5°W. Um valor por mês: a variável do mês t
 # usa o próprio mês t. Explica meses críticos na Amazônia, no Cerrado e no Pantanal bem melhor que o ONI
-# (correlação anual 0,42–0,45 contra 0,08–0,22, 2004–2021); por isso substitui o ONI no modelo.
+# (correlação anual 0,42–0,45 contra 0,08–0,22, 2004–2021), mas fica no painel só para análise
+# descritiva: nenhum índice climático melhorou o Random Forest fora da amostra.
 
 TNA_URL = "https://psl.noaa.gov/data/correlation/tna.data"
 _PSL_MISSING = -90.0  # a PSL marca meses sem dado com -99.99

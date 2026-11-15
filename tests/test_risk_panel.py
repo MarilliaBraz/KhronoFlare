@@ -139,3 +139,20 @@ def test_critical_threshold_still_uses_all_train_years():
     t = add_target(h, train_years=(2004, 2016))
     assert t["frp_p75"].nunique() == 1
     assert t["frp_p75"].iloc[0] == pytest.approx(np.percentile([0.0, 20.0, 40.0], 75))
+
+
+# ---------- células definidas só pelo período de treino ----------
+
+def test_cells_that_only_burn_after_training_are_left_out():
+    f = _fused([("2010-08-01", -10.1, -50.1, 5.0),     # célula A: fogo no treino
+                ("2018-08-01", -20.1, -40.1, 5.0)])    # célula B: só no teste
+    agg = aggregate_cells(f, res=0.5, start="2003-01", end="2021-12")
+    p = complete_panel(agg, "2003-01", "2021-12", cells_until="2016-12")
+    assert set(map(tuple, p[["cy", "cx"]].drop_duplicates().to_numpy())) == {(-21, -101)}
+    assert complete_panel(agg, "2003-01", "2021-12")[["cy", "cx"]].drop_duplicates().shape[0] == 2
+
+
+def test_build_panel_uses_training_cells_only():
+    rows = [("2004-08-10", -10.1, -50.1, 5.0), ("2007-08-10", -20.1, -40.1, 5.0)]
+    p = build_panel(_fused(rows), res=0.5, period=("2003-01", "2007-12"), train_years=(2004, 2005))
+    assert p[["cy", "cx"]].drop_duplicates().shape[0] == 1

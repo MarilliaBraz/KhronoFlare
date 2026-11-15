@@ -39,10 +39,15 @@ def aggregate_cells(fused: pd.DataFrame, res: float, start: str, end: str) -> pd
     return df.groupby([*KEYS, "ym"]).agg(n=("frp", "size"), frp=("frp", "sum")).reset_index()
 
 
-def complete_panel(agg: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
-    """Todas as células que tiveram fogo × todos os meses; mês sem foco vira n = 0 e frp = 0."""
+def complete_panel(agg: pd.DataFrame, start: str, end: str, cells_until: str | None = None) -> pd.DataFrame:
+    """Células que tiveram fogo × todos os meses; mês sem foco vira n = 0 e frp = 0.
+
+    Com `cells_until`, só entram células com fogo até esse mês: a população do painel não pode depender
+    do período de teste (senão células que só queimaram no teste entram por causa do próprio resultado).
+    """
     months = pd.DataFrame({"ym": pd.period_range(start, end, freq="M")})
-    grid = agg[KEYS].drop_duplicates().merge(months, how="cross")
+    known = agg if cells_until is None else agg[agg["ym"] <= pd.Period(cells_until, "M")]
+    grid = known[KEYS].drop_duplicates().merge(months, how="cross")
     panel = grid.merge(agg, on=[*KEYS, "ym"], how="left").fillna({"n": 0, "frp": 0.0})
     return panel.astype({"n": int}).sort_values([*KEYS, "ym"]).reset_index(drop=True)
 
@@ -94,4 +99,5 @@ def build_panel(fused: pd.DataFrame, res: float, period: tuple[str, str],
                 train_years: tuple[int, int]) -> pd.DataFrame:
     """Do FRP fundido (um foco por linha) ao painel pronto para o modelo."""
     agg = aggregate_cells(fused, res, *period)
-    return add_target(add_history(complete_panel(agg, *period)), train_years)
+    panel = complete_panel(agg, *period, cells_until=f"{train_years[1]}-12")
+    return add_target(add_history(panel), train_years)

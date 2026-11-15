@@ -119,3 +119,16 @@ def test_grouped_importance_does_not_modify_the_input():
     before = test.copy()
     grouped_permutation_importance(model, test, BASE_FEATURES, FEATURE_GROUPS, n_repeats=2, seed=0)
     pd.testing.assert_frame_equal(test, before)
+
+# ---------- mês do mapa escolhido sem olhar o resultado ----------
+
+from firms_harmonize.risk.model import choose_map_month
+
+
+def test_map_month_uses_fire_known_at_prediction_time_not_the_label():
+    ym = pd.PeriodIndex(["2019-07", "2019-08", "2019-09", "2020-07"], freq="M")   # alvos ago, set, out/19 e ago/20
+    test = pd.DataFrame({"ym": ym, "mes_alvo": [8, 9, 10, 8], "frp_lag0": [5.0, 50.0, 1.0, 20.0],
+                         "y_critico": [1, 0, 1, 1]})
+    assert choose_map_month(test) == pd.Period("2019-09", "M")    # alvo do mês com maior ΣFRP em t
+    flipped = test.assign(y_critico=1 - test["y_critico"])
+    assert choose_map_month(flipped) == pd.Period("2019-09", "M")  # o rótulo não muda a escolha
