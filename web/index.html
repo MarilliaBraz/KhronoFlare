@@ -14,7 +14,7 @@
 <header class="top">
   <div class="brand"><span class="mark" aria-hidden="true"></span>
     <div><h1>Hotspot Alert Console</h1>
-      <p>Real NASA FIRMS detections, 12 Nov 2026 · alerts are simulated</p></div></div>
+      <p>Real NASA FIRMS detections from 12 Nov 2026. Alerts are simulated.</p></div></div>
   <div class="who">
     <button class="btn sm" id="howto">How it works</button>
     <label for="juris">Your area</label>
@@ -112,7 +112,8 @@
 </section>
 
 <div class="sheet" id="sheet" hidden><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="sheet-h" id="sheet-body"></div></div>
-<p class="foot">Prototype for NASA Space Apps 2026. Detections: NASA FIRMS NRT sample (Terra/Aqua MODIS, NOAA-20 VIIRS). Boundaries: IBGE. The priority score is provisional. The harmonized intensity and the historical anomaly per place will come from <span class="num">firms_harmonize</span> and are not shown yet. Real alerts can only be sent by civil protection.</p>
+<footer class="foot"><p>Prototype for NASA Space Apps 2026. Only civil protection can send real alerts.</p>
+  <p>Data: NASA FIRMS near-real-time sample (Terra/Aqua MODIS, NOAA-20 VIIRS) and IBGE boundaries. The priority score is provisional; harmonized intensity and how unusual each fire is will come from <code>firms_harmonize</code>.</p></footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="ntfy.js"></script>
 <script src="app.js"></script>

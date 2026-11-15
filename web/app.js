@@ -141,7 +141,7 @@ function main(D) {
       shape.setAttribute('fill',col); shape.setAttribute('fill-opacity', S.sel && !sel ? '0.35':'0.9');
       shape.setAttribute('stroke','var(--panel)'); shape.setAttribute('stroke-width', String(0.8*u));
       shape.style.cursor='pointer'; shape.dataset.id=p.mun;
-      const tt=el('title',{}); tt.textContent=`${p.sensor} (${p.sat}) · FRP ${p.frp} MW · ${hhmm(p.time)} UTC · conf ${p.conf}`; shape.appendChild(tt);
+      const tt=el('title',{}); tt.textContent=`${p.sensor} ${p.sat}: ${p.frp} MW at ${hhmm(p.time)} UTC, confidence ${p.conf}`; shape.appendChild(tt);
       frag.appendChild(shape);
     });
     gPts.appendChild(frag);
@@ -219,7 +219,7 @@ function main(D) {
             <option value="evacuate" ${it.action==='evacuate'?'selected':''}>Prepare to leave</option></select></div>
         </div>
         <div class="field"><span>Message people will see</span><div class="msgbox" id="msgprev">${esc(msg)}</div></div>
-        <details class="more" data-keep="opts" ${S.open.opts?'open':''}><summary>More options <span class="sum">${it.hours} h · ${it.lang==='pt'?'Portuguese':'English'} · ${fmtInt(a)} km²</span></summary>
+        <details class="more" data-keep="opts" ${S.open.opts?'open':''}><summary>More options <span class="sum">${it.hours} h, ${it.lang==='pt'?'Portuguese':'English'}, ${fmtInt(a)} km²</span></summary>
           <div class="form">
             <div class="row2">
               <div class="field"><label for="f-hours">Valid for</label><select id="f-hours" data-k="hours">
@@ -258,7 +258,7 @@ function main(D) {
     const cs=checks(c,it), warn=softWarn(cs);
     const lv = it.level==='extreme'?'<span class="chip extreme">Extreme</span>':'<span class="chip severe">Severe</span>';
     return `<div><span class="eyebrow">Second-person review</span><h2 id="sheet-h">Approve the alert for ${esc(c.name)} (${c.uf})?</h2></div>
-      <div>${lv} · ${fmtInt(areaOf(c,it))} km² · valid ${it.hours} h · written by Analyst ${c.uf}</div>
+      <div>${lv} alert over ${fmtInt(areaOf(c,it))} km², valid for ${it.hours} h. Written by Analyst ${c.uf}.</div>
       <div class="msgbox">${esc(msgOf(c,it))}</div>${checksHtml(cs)}
       <label style="display:flex;gap:8px;font-size:13px"><input type="checkbox" id="ack-who"> I am the approver on duty, not the person who wrote this alert</label>
       ${warn?`<label style="display:flex;gap:8px;font-size:13px"><input type="checkbox" id="ack-warn"> I reviewed the warnings and the alert is still needed</label>`:''}
@@ -291,7 +291,7 @@ function main(D) {
     const pop=document.getElementById('pop');
     const title = kind==='extreme'?'Extreme alert':kind==='severe'?'Severe alert':'Alert cancelled';
     pop.className='pop '+(kind==='extreme'?'':kind==='severe'?'sev':'cancel');
-    pop.innerHTML=`<div class="ph"><span class="tri"></span>${title}</div><div class="pb">${esc(text)}</div><div class="pf"><span>SIMULATION · not an official alert</span><button id="pop-ok">OK</button></div>`;
+    pop.innerHTML=`<div class="ph"><span class="tri"></span>${title}</div><div class="pb">${esc(text)}</div><div class="pf"><span>Simulation, not an official alert</span><button id="pop-ok">OK</button></div>`;
     pop.hidden=false;
     document.getElementById('phonecap').textContent = kind==='cancel' ? `Cancellation shown to phones in ${c.name}.` : `Simulation of what phones in the ${c.name} alert area would show.`;
     document.getElementById('pop-ok').onclick=()=>{ pop.hidden=true; };
@@ -340,7 +340,7 @@ function main(D) {
     try{ navigator.clipboard.writeText(S.lastCap).then(done,fallback); }catch(e){ fallback(); } };
 
   /* ---------- actions ---------- */
-  function select(id){ S.sel=id; renderQueue(); drawSelection(); renderSide(); document.getElementById('maptitle').textContent = id ? `${byId[id].name} · ${byId[id].uf}` : 'Brazil'; setVB(id ? fitVB(byId[id].bbox) : brazilVB(), true); }
+  function select(id){ S.sel=id; renderQueue(); drawSelection(); renderSide(); document.getElementById('maptitle').textContent = id ? `${byId[id].name}, ${byId[id].uf}` : 'Brazil'; setVB(id ? fitVB(byId[id].bbox) : brazilVB(), true); }
   function startDraft(c,it){ if(c.uf!==S.juris) return; it.status='draft'; it.lang='pt'; addLog(`Analyst ${S.juris}`, `Started alert for ${c.name} (${c.uf})`); }
   function act(name){
     const c=byId[S.sel], it=item(c.id);
@@ -394,7 +394,7 @@ function main(D) {
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); let sib=li; do { sib=e.key==='ArrowDown'?sib.nextElementSibling:sib.previousElementSibling; } while(sib && !sib.classList.contains('qitem')); if(sib) sib.focus(); } });
   document.querySelectorAll('.filters button').forEach(b=>b.onclick=()=>{ S.filter=b.dataset.f; document.querySelectorAll('.filters button').forEach(x=>x.setAttribute('aria-pressed', x===b)); renderQueue(); });
   const jsel=document.getElementById('juris');
-  [...new Set(D.cands.map(c=>c.uf))].sort().forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=`Civil protection · ${u}`; if(u===S.juris) o.selected=true; jsel.appendChild(o); });
+  [...new Set(D.cands.map(c=>c.uf))].sort().forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=`Civil protection, ${u}`; if(u===S.juris) o.selected=true; jsel.appendChild(o); });
   jsel.onchange=()=>{ S.juris=jsel.value; renderQueue(); renderSide(); };
   document.getElementById('zoom-out').onclick=()=>select(null);
   document.getElementById('sound').onclick=e=>{ S.sound=!S.sound; e.target.textContent=`Alert sound: ${S.sound?'on':'off'}`; };
@@ -420,7 +420,7 @@ function main(D) {
 
   /* ---------- boot ---------- */
   const inBr=D.points.filter(p=>p.uf).length;
-  document.getElementById('mapstats').textContent = `${inBr} fires in Brazil across ${D.cands.length} municipalities · ${D.points.length-inBr} in neighbouring countries are shown in grey and cannot be alerted`;
+  document.getElementById('mapstats').textContent = `${inBr} fires in Brazil across ${D.cands.length} municipalities. The ${D.points.length-inBr} grey points are in neighbouring countries and cannot be alerted.`;
   buildMap(); renderQueue(); renderSide(); renderLog(); renderPhoneClock(); setInterval(renderPhoneClock, 15000);
   select((D.cands.find(c=>c.uf===S.juris)||D.cands[0]).id);
 }
