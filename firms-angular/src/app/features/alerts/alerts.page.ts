@@ -25,8 +25,33 @@ export class AlertsPage implements OnInit {
     if (!this.data.candidates().length) this.data.load();
   }
 
-  t(key: string): string {
-    return this.i18n.t(key);
+  t(key: string, vars?: Record<string, string | number>): string {
+    return this.i18n.t(key, vars);
+  }
+
+  private locale(): string {
+    return this.i18n.lang() === 'pt' ? 'pt-BR' : 'en-US';
+  }
+
+  /** "Nov 1–13, 2026" / "1–13 de nov. de 2026", a partir do window do harmonized_mun.json. */
+  harmWindow(): string {
+    const w = this.data.harmonizedMun()?.window;
+    if (!w?.years) return '';
+    const year = w.years[1];
+    const month = new Intl.DateTimeFormat(this.locale(), {
+      month: 'short',
+      timeZone: 'UTC',
+    }).format(new Date(Date.UTC(year, w.month - 1, 15)));
+    const days = `${w.day_start}–${w.day_end}`;
+    return this.i18n.lang() === 'pt'
+      ? `${days} de ${month} de ${year}`
+      : `${month} ${days}, ${year}`;
+  }
+
+  /** Anos de referência da mediana: todos menos o corrente. */
+  harmRefYears(): string {
+    const y = this.data.harmonizedMun()?.window?.years;
+    return y ? `${y[0]}–${y[1] - 1}` : '';
   }
 
   statusOf(c: CandidateMun): string {
@@ -38,7 +63,8 @@ export class AlertsPage implements OnInit {
     if (!h) return '—';
     if (field === 'frp') {
       const v = h.frpHarm ?? h.value;
-      return v == null ? '—' : Number(v).toFixed(1);
+      if (v == null) return '—';
+      return `${Number(v).toLocaleString(this.locale(), { maximumFractionDigits: 0 })} MW`;
     }
     const a = h.anomalia_pct;
     if (a == null) return '—';

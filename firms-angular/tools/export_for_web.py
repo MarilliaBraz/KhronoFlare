@@ -12,11 +12,33 @@ Se --processed não existir, escreve stubs vazios (UI continua em modo awaiting)
 from __future__ import annotations
 
 import argparse
+import calendar as _cal
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+
+# Campos comparativos que perdem sentido num mês com só parte dos dias.
+PARTIAL_NULL_FIELDS = ("anomalia_pct", "percentil")
+
+
+def mark_partial_month(rows: list[dict], data_end: date) -> list[dict]:
+    """Marca o mês mais recente como parcial quando os dados acabam antes do fim dele.
+
+    Um mês incompleto comparado com meses cheios gera anomalia falsa (ex.: −57 %),
+    então anomalia e percentil viram None e a linha ganha partial=True.
+    """
+    if not rows:
+        return rows
+    last = max(rows, key=lambda r: (r["year"], r["month"]))
+    last_day = _cal.monthrange(last["year"], last["month"])[1]
+    if data_end >= date(last["year"], last["month"], last_day):
+        return rows
+    return [
+        {**r, **{k: None for k in PARTIAL_NULL_FIELDS}, "partial": True} if r is last else r
+        for r in rows
+    ]
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -25,7 +47,7 @@ def write_json(path: Path, payload: dict) -> None:
     print(f"wrote {path}")
 
 
-def export_calendar(processed: Path, out: Path) -> None:
+def export_calendar(processed: Path, out: Path, data_end: date) -> None:
     csv_path = processed / "calendar_brasil.csv"
     grid_path = processed / "calendar_brasil_grid.csv"
     now = datetime.now(timezone.utc).isoformat()
@@ -62,6 +84,7 @@ def export_calendar(processed: Path, out: Path) -> None:
                 "percentil": None if pd.isna(r.get("percentil")) else float(r["percentil"]),
             }
         )
+    rows = mark_partial_month(rows, data_end)
     cur_year = max((x["year"] for x in rows), default=None)
     cur_month = None
     if cur_year is not None:
@@ -90,23 +113,43 @@ def export_calendar(processed: Path, out: Path) -> None:
     )
 
 
-def export_mun_stub(out: Path) -> None:
-    """Placeholder: join célula→município fica a cargo do agente de dados."""
-    write_json(
-        out / "harmonized_mun.json",
-        {"kind": "harmonized-mun", "generated": None, "byId": {}},
-    )
+def export_mun(processed: Path, malhas: Path, out: Path, data_end: date) -> None:
+    """FRP harmonizado por município (mun_join); stub vazio se faltar entrada."""
+    fused = processed / "frp" / "frp_fused.parquet"
+    if not fused.exists() or not malhas.is_dir():
+        print(f"AVISO: falta {fused} ou {malhas} — harmonized_mun.json vazio")
+        write_json(
+            out / "harmonized_mun.json",
+            {"kind": "harmonized-mun", "generated": None, "byId": {}},
+        )
+        return
+    from mun_join import build_payload  # mesmo diretório; shapely só é exigido aqui
+
+    now = datetime.now(timezone.utc).isoformat()
+    write_json(out / "harmonized_mun.json", build_payload(fused, malhas, data_end, now))
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--processed", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument(
+        "--data-end",
+        type=date.fromisoformat,
+        default=datetime.now(timezone.utc).date(),
+        help="último dia coberto pelos dados brutos (AAAA-MM-DD); padrão: hoje",
+    )
+    ap.add_argument(
+        "--malhas",
+        type=Path,
+        default=Path(__file__).resolve().parents[2] / "web" / "tools" / "ibge-malhas",
+        help="pasta com as malhas municipais do IBGE por UF (<UF>.json)",
+    )
     args = ap.parse_args()
     if not args.processed.exists():
         print(f"AVISO: {args.processed} não encontrado — stubs vazios")
-    export_calendar(args.processed, args.out)
-    export_mun_stub(args.out)
+    export_calendar(args.processed, args.out, args.data_end)
+    export_mun(args.processed, args.malhas, args.out, args.data_end)
 
 
 if __name__ == "__main__":

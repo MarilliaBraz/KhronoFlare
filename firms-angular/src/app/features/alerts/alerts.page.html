@@ -51,11 +51,14 @@
         @if (alerts.selectedCase(); as ac) {
           <h2>{{ c.name }} <span class="uf">{{ c.uf }}</span></h2>
           <p class="sub">Priority {{ c.tier }} · {{ c.n }} hotspots · high conf {{ c.high }} · FRP max {{ c.frpMax | number: '1.1-1' }}</p>
-          <p class="harm" [class.awaiting]="!data.harmonizedMunReady()">
-            {{ t('alerts.harm.frp') }}:
+          <p class="harm" [class.awaiting]="!data.harmonizedMunReady()" [attr.title]="t('alerts.harm.hint')">
+            {{ t('alerts.harm.frp') }}@if (harmWindow()) {, {{ harmWindow() }}}:
             {{ fmtHarm(c.id, 'frp') }}
             · {{ t('alerts.harm.anomaly') }}:
             {{ fmtHarm(c.id, 'anom') }}
+            @if (harmRefYears() && fmtHarm(c.id, 'anom') !== '—') {
+              {{ t('alerts.harm.vs', { years: harmRefYears() }) }}
+            }
           </p>
           <div class="status">Status: <b>{{ ac.status }}</b></div>
 

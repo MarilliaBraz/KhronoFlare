@@ -84,6 +84,8 @@ export interface HarmonizedCalendarRow {
   p90?: number | null;
   anomalia_pct?: number | null;
   percentil?: number | null;
+  /** Mês ainda incompleto nos dados brutos: anomalia/percentil vêm null. */
+  partial?: boolean;
 }
 
 export interface HarmonizedCalendarPayload {
@@ -109,6 +111,9 @@ export interface HarmonizedMunStats {
 export interface HarmonizedMunPayload {
   kind: 'harmonized-mun';
   generated?: string;
+  /** Recorte comparado em todos os anos (ex.: dias 1–13 de novembro). */
+  window?: { month: number; day_start: number; day_end: number; years: [number, number] | null };
+  source?: string;
   byId: Record<string, HarmonizedMunStats>;
 }
 
@@ -137,7 +142,15 @@ export interface ForecastMeta {
 }
 
 /** Compact cell: [cy, cx, cls, years, mean, active, prob|null] */
-export type ForecastCell = [number, number, ForecastClass | string, number, number, number, number | null];
+export type ForecastCell = [
+  number,
+  number,
+  ForecastClass | string,
+  number,
+  number,
+  number,
+  number | null,
+];
 
 export interface ForecastMunicipality {
   id: string;

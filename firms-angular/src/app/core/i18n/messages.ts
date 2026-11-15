@@ -25,6 +25,9 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     'alerts.area.all': 'All',
     'alerts.harm.frp': 'Harmonized FRP',
     'alerts.harm.anomaly': 'Anomaly',
+    'alerts.harm.vs': 'vs {years} median',
+    'alerts.harm.hint':
+      'Sum of fire radiative power (MW) from Aqua MODIS detections, rescaled to S-NPP VIIRS. The same days are compared in every year.',
     'layers.all': 'All',
     'layers.last3': 'Last 3',
     'layers.report': 'Selection report',
@@ -38,7 +41,7 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     'conf.all': 'All',
     'conf.nominal': 'Nominal+',
     'conf.high': 'High',
-    'period': 'Period',
+    period: 'Period',
     'duration.day': '1 day',
     'duration.days': '{n} days',
     'timeline.hint': 'Drag across days to select a range · click for a single day',
@@ -80,13 +83,13 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     'phone.test': 'Send test',
     'outlook.title': 'Next-month outlook',
     'outlook.export': 'Export CSV',
-    'loading': 'Loading hotspots…',
+    loading: 'Loading hotspots…',
     'burn.note':
       'Monthly calendar from harmonized series. MODIS burned-area polygons are not in the repo yet.',
     'burn.awaiting':
       'Layout ready — run tools/export_for_web.py after firms_harmonize to fill calendar.json.',
-    'older': 'Older',
-    'recent': 'Most recent',
+    older: 'Older',
+    recent: 'Most recent',
   },
   pt: {
     'brand.name': 'Khronoflare',
@@ -112,6 +115,9 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     'alerts.area.all': 'Todas',
     'alerts.harm.frp': 'FRP harmonizado',
     'alerts.harm.anomaly': 'Anomalia',
+    'alerts.harm.vs': 'vs mediana {years}',
+    'alerts.harm.hint':
+      'Soma da potência radiativa do fogo (MW) dos focos do Aqua MODIS, convertida para a escala do S-NPP VIIRS. Os mesmos dias são comparados em todos os anos.',
     'layers.all': 'Todos',
     'layers.last3': 'Últimos 3',
     'layers.report': 'Relatório da seleção',
@@ -125,7 +131,7 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     'conf.all': 'Todas',
     'conf.nominal': 'Nominal+',
     'conf.high': 'Alta',
-    'period': 'Período',
+    period: 'Período',
     'duration.day': '1 dia',
     'duration.days': '{n} dias',
     'timeline.hint': 'Arraste pelos dias para selecionar um intervalo · clique para um dia',
@@ -167,12 +173,12 @@ export const MESSAGES: Record<Lang, Record<string, string>> = {
     'phone.test': 'Enviar teste',
     'outlook.title': 'Outlook do próximo mês',
     'outlook.export': 'Exportar CSV',
-    'loading': 'Carregando focos…',
+    loading: 'Carregando focos…',
     'burn.note':
       'Calendário mensal da série harmonizada. Polígonos MODIS de área queimada ainda não estão no repositório.',
     'burn.awaiting':
       'Layout pronto — rode tools/export_for_web.py após o firms_harmonize para preencher calendar.json.',
-    'older': 'Mais antigo',
-    'recent': 'Mais recente',
+    older: 'Mais antigo',
+    recent: 'Mais recente',
   },
 };
