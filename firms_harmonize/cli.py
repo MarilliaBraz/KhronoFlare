@@ -11,6 +11,7 @@
     python -m firms_harmonize frp-match       # FRP: pares Aqua × S-NPP (pegada MODIS, Δt ≤ 5 min) → pairs.parquet
     python -m firms_harmonize frp-calibrate   # FRP: modelo ln V = a + b ln M + c VZA, validado fora da amostra
     python -m firms_harmonize frp-fuse        # FRP: fusão diária no pixel MODIS → frp_fused.parquet, frp_anual.csv
+    python -m firms_harmonize risk-panel      # risco: painel célula 0,5° × mês com histórico e alvo de mês crítico
 """
 from __future__ import annotations
 
@@ -215,11 +216,31 @@ def cmd_frp_fuse(args):
                 "frp_harm_mediana", "frac_viirs"]].round(3).to_string(index=False))
 
 
+def cmd_risk_panel(args):
+    from .config import RISK_DIR, RISK_PERIOD, RISK_RES, RISK_TEST_YEARS, RISK_TRAIN_YEARS
+    from .risk.panel import build_panel
+    fused = pd.read_parquet(FRP_DIR / "frp_fused.parquet", columns=["date", "lat", "lon", "frp_harm"])
+    panel = build_panel(fused, RISK_RES, RISK_PERIOD, RISK_TRAIN_YEARS)
+    RISK_DIR.mkdir(parents=True, exist_ok=True)
+    panel.to_parquet(RISK_DIR / "panel.parquet", index=False)
+    cells = panel[["cy", "cx"]].drop_duplicates()
+    print(f"Células de {RISK_RES}°: {len(cells):,} | linhas: {len(panel):,} | "
+          f"meses-alvo {panel['ano_alvo'].min()}–{panel['ano_alvo'].max()}")
+    for nome, anos in [("treino", RISK_TRAIN_YEARS), ("teste", RISK_TEST_YEARS)]:
+        sel = panel["ano_alvo"].between(*anos)
+        print(f"  {nome} {anos}: {sel.sum():,} linhas | mês crítico {panel.loc[sel, 'y_critico'].mean():.1%} "
+              f"| com fogo {(panel.loc[sel, 'alvo_n'] > 0).mean():.1%}")
+    por_ano = panel.groupby("ano_alvo")["y_critico"].mean().mul(100).round(1)
+    print("  % de meses críticos por ano:", por_ano.to_dict())
+    por_mes = panel.groupby("mes_alvo")["y_critico"].mean().mul(100).round(1)
+    print("  % de meses críticos por mês do ano:", por_mes.to_dict())
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="firms_harmonize")
     sub = p.add_subparsers(dest="cmd", required=True)
     for name in ["status", "boundary", "fetch-recent", "aggregate", "harmonize", "validate", "all",
-                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse"]:
+                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse", "risk-panel"]:
         sp = sub.add_parser(name)
         sp.add_argument("--res", type=float, default=0.25, help="lado da célula em graus")
         sp.add_argument("--min-conf", default="nominal", choices=["low", "nominal", "high"])
@@ -238,7 +259,8 @@ def main(argv=None):
     run = {"status": cmd_status, "boundary": cmd_boundary, "fetch-recent": cmd_fetch_recent,
            "aggregate": cmd_aggregate, "harmonize": cmd_harmonize, "validate": cmd_validate,
            "frp-prepare": cmd_frp_prepare, "frp-match": cmd_frp_match,
-           "frp-calibrate": cmd_frp_calibrate, "frp-fuse": cmd_frp_fuse}
+           "frp-calibrate": cmd_frp_calibrate, "frp-fuse": cmd_frp_fuse,
+           "risk-panel": cmd_risk_panel}
     if a.cmd == "all":
         for f in (cmd_aggregate, cmd_harmonize, cmd_validate):
             f(a)

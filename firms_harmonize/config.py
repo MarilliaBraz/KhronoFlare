@@ -42,6 +42,13 @@ REFERENCE = "SNPP"  # a série harmonizada fica em "unidades S-NPP VIIRS 375 m"
 # Harmonização de FRP por pareamento de pixels: arquivos de cada plataforma e período lido.
 # O Aqua é lido inteiro (vai para a série final); o S-NPP só na janela de calibração Aqua→SNPP.
 FRP_DIR = PROCESSED / "frp"
+
+# Modelo de risco de mês crítico (Aqua harmonizado, antes da deriva orbital de 2022).
+RISK_DIR = PROCESSED / "risk"
+RISK_RES = 0.5                           # graus
+RISK_PERIOD = ("2003-01", "2021-12")
+RISK_TRAIN_YEARS = (2004, 2016)          # anos do mês-alvo
+RISK_TEST_YEARS = (2017, 2021)
 FRP_SOURCES = {
     "Aqua": ("fire_*_M-C61_*.csv", PLATFORM_PERIODS["Aqua"][0], None),
     "SNPP": ("fire_*_SV-C2_*.csv", *CALIBRATION[("Aqua", "SNPP")]),
