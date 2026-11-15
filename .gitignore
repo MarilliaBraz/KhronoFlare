@@ -10,3 +10,4 @@ DL_FIRE_*/
 *.zip
 .coverage
 .cache/
+.vercel
