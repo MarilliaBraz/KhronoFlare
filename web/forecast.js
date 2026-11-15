@@ -141,7 +141,8 @@
       hs: Math.round(r.high_share * 100), hm: r.high_mean, ms: Math.round(r.medium_share * 100), mm: r.medium_mean, am: r.active_min }) +
       (meta.model ? t('fc.rule.model', { p: Math.round(meta.model.min_prob * 100), b: Math.round(meta.model.base_rate * 100),
         month: monthName(), auc: num(meta.model.roc_auc_temporal, 2), from: meta.model.train_years[0], to: meta.model.train_years[1],
-        until: meta.model.data_until }) : t('fc.rule.nomodel'));
+        until: new Date(meta.model.data_until + 'T12:00:00Z').toLocaleDateString(I18N.locale(), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) })
+      : t('fc.rule.nomodel'));
     const all = S.fc.municipalities;
     $('fc-stats').textContent = t('fc.stats', { h: num(all.filter(m => m.cls === 'high').length),
       m: num(all.filter(m => m.cls === 'medium').length), c: num(S.fc.cells.filter(c => c[2] !== 'low').length) });

@@ -12,8 +12,8 @@ Regra (fica escrita no meta para a página mostrar):
   * ≥ 3 focos ativos agora na célula sobem um nível (1 foco isolado costuma ser queima pequena). Se web/data.json for a amostra de 12/11 (não "live"),
     o fogo ativo não conta;
   * modelo (web/tools/previsao_modelo.json, Random Forest, gerado à parte com `risk-forecast`): se ele
-    for do mesmo mês-alvo, probabilidade ≥ 35 % de mês crítico (o dobro da chance normal de dezembro,
-    ~17 %) sobe mais um nível. Mês crítico = ΣFRP acima do percentil 75 da própria célula.
+    for do mesmo mês-alvo, probabilidade ≥ 35 % de mês crítico (cerca de 10 % dos quadrados em dez/2026;
+    a chance normal de dezembro é 20 %) sobe mais um nível. Mês crítico = ΣFRP acima do percentil 75 da própria célula.
 
     python3 web/tools/build_forecast.py web/forecast.json
 """
