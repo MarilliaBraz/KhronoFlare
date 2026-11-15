@@ -1,0 +1,14 @@
+# Só a pasta web/ é publicada (vercel.json → outputDirectory). O resto fica fora do envio.
+DL_FIRE_*
+*.zip
+data/
+.venv/
+.cache/
+.env
+*.jpeg
+analises/
+comentarios-da-equipe/
+ideias/
+tests/
+firms_harmonize/
+web/tools/
