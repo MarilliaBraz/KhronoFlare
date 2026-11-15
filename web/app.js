@@ -85,15 +85,19 @@ function main(D) {
     const n={all:D.cands.length, open:0, active:0};
     D.cands.forEach(c=>{ const s=item(c.id).status; if(isOpen(s) && (s!=='new' || c.uf===S.juris)) n.open++; if(isAlert(s)) n.active++; });
     document.querySelectorAll('.filters button').forEach(b=>{ const e=b.querySelector('.n'); if(e) e.textContent=n[b.dataset.f]; });
-    const list=visible();
-    document.getElementById('queue').innerHTML = list.map(c=>{
+    const list=visible(), mine=list.filter(c=>c.uf===S.juris), others=list.filter(c=>c.uf!==S.juris);
+    const row = c=>{
       const it=item(c.id), st=STATUS[it.status], ra=rowAction(c,it);
       const btn = ra ? `<button class="qact ${ra[2]}" data-qa="${ra[0]}" aria-label="${ra[1]} ${esc(c.name)}">${ra[1]}</button>` : '';
       const chip = it.status==='new' ? '' : ` <span class="chip ${st[1]}">${st[0]}</span>`;
       return `<li class="qitem t-${c.tier}" role="option" tabindex="0" data-id="${c.id}" aria-selected="${S.sel===c.id}">
         <span class="stripe"></span><span class="qname">${esc(c.name)} <span class="uf">${c.uf}</span></span>${btn}
-        <span class="qmeta"><span class="tier">${TIER[c.tier]}</span> · <span class="num">${c.n} fires · ${fmt1(c.frpMax)} MW</span>${chip}</span></li>`;
-    }).join('') || `<li class="empty">${S.filter==='open'?'Nothing to do in your area.':'No alerts yet.'}</li>`;
+        <span class="qmeta"><span class="tier">${TIER[c.tier]}</span><span class="num">${c.n} fire${c.n>1?'s':''}</span><span class="num">${fmt1(c.frpMax)} MW max</span>${chip}</span></li>`;
+    };
+    const group = (title, cs) => cs.length ? `<li class="qgroup" role="presentation">${title}</li>${cs.map(row).join('')}` : '';
+    document.getElementById('queue').innerHTML =
+      (group(`Your area, ${S.juris}`, mine) + group('Other states, view only', others))
+      || `<li class="empty">${S.filter==='open'?'Nothing to do in your area.':'No alerts yet.'}</li>`;
   }
 
   /* ---------- map ---------- */
@@ -161,7 +165,7 @@ function main(D) {
     if(!S.sel){ side.innerHTML=`<div class="phead"><h2>Pick an area</h2></div><div class="empty">Choose a municipality in the list or click a fire on the map.</div>`; return; }
     const c=byId[S.sel], it=item(c.id), st=STATUS[it.status];
     const dets=D.points.filter(p=>p.mun===c.id).sort((a,b)=>b.frp-a.frp);
-    let h=`<div class="phead"><div><span class="eyebrow">${c.uf} · ${TIER[c.tier]} priority (provisional)</span><h2 class="case-h">${esc(c.name)}</h2></div>${it.status==='new'?'':`<span class="chip ${st[1]}">${st[0]}</span>`}</div><div class="body">`;
+    let h=`<div class="phead"><div><h2 class="case-h">${esc(c.name)} <span class="uf">${c.uf}</span></h2><p class="case-sub t-${c.tier}"><span class="tier">${TIER[c.tier]} priority</span> (provisional score)</p></div>${it.status==='new'?'':`<span class="chip ${st[1]}">${st[0]}</span>`}</div><div class="body">`;
     h+=stepper(it);
     h+=`<div class="facts">
       <div><b class="num">${c.n}</b><span>fire detections</span></div>
@@ -191,7 +195,7 @@ function main(D) {
   function stepper(it){
     const idx = {new:0, dismissed:0, draft:1, pending:2, sent:3, cancelled:3}[it.status];
     const names=['Analyze','Write','Approve','Sent'];
-    return `<ol class="steps" aria-label="Progress">${names.map((n,i)=>`<li class="${i<idx?'done':i===idx?'now':''}"${i===idx?' aria-current="step"':''}>${n}</li>`).join('')}</ol>`;
+    return `<ol class="steps" aria-label="Progress">${names.map((n,i)=>`<li class="${i<idx?'done':i===idx?'now':''}"${i===idx?' aria-current="step"':''}><span class="sn" aria-hidden="true">${i<idx?'✓':i+1}</span>${n}</li>`).join('')}</ol>`;
   }
   function actionBlock(c,it){
     if(it.status==='new' || it.status==='dismissed'){
@@ -387,7 +391,7 @@ function main(D) {
   });
   document.getElementById('queue').addEventListener('keydown', e=>{ const li=e.target.closest('.qitem'); if(!li || e.target.closest('[data-qa]')) return;
     if(e.key==='Enter'||e.key===' '){ e.preventDefault(); select(li.dataset.id); }
-    if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); const sib=e.key==='ArrowDown'?li.nextElementSibling:li.previousElementSibling; if(sib) sib.focus(); } });
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); let sib=li; do { sib=e.key==='ArrowDown'?sib.nextElementSibling:sib.previousElementSibling; } while(sib && !sib.classList.contains('qitem')); if(sib) sib.focus(); } });
   document.querySelectorAll('.filters button').forEach(b=>b.onclick=()=>{ S.filter=b.dataset.f; document.querySelectorAll('.filters button').forEach(x=>x.setAttribute('aria-pressed', x===b)); renderQueue(); });
   const jsel=document.getElementById('juris');
   [...new Set(D.cands.map(c=>c.uf))].sort().forEach(u=>{ const o=document.createElement('option'); o.value=u; o.textContent=`Civil protection · ${u}`; if(u===S.juris) o.selected=true; jsel.appendChild(o); });
