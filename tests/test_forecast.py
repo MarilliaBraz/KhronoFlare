@@ -101,3 +101,13 @@ def test_ranking_order_class_then_active_then_history():
     cities = _cities([("1", "A", "PA", -4.9, -49.9), ("2", "B", "PA", -5.9, -49.9), ("3", "C", "PA", -6.9, -49.9)])
     fc = bf.build_forecast(clim, live, cities)
     assert [m["id"] for m in fc["municipalities"]] == ["2", "1", "3"]
+
+
+def test_same_content_ignores_only_the_generation_time():
+    a = {"meta": {"target": "2026-12", "generated": "2026-11-15T12:00:00+00:00"}, "cells": [[1, 2, "high", 3, 4.0, 0]],
+         "municipalities": []}
+    b = {**a, "meta": {**a["meta"], "generated": "2026-11-15T15:00:00+00:00"}}
+    c = {**b, "cells": [[1, 2, "medium", 3, 4.0, 0]]}
+    assert bf.same_content(a, b) is True
+    assert bf.same_content(a, c) is False
+    assert bf.same_content(None, a) is False

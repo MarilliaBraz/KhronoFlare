@@ -30,15 +30,19 @@ jobs:
       - name: Baixar e processar o FIRMS
         run: python3 -I web/tools/build_live.py web/data.json --cache web/tools/ibge-malhas
 
+      # Previsão do próximo mês para o gestor (web/forecast.html): histórico 2004–2021 + os focos que acabaram de chegar.
+      - name: Refazer a previsão do próximo mês
+        run: python3 -I web/tools/build_forecast.py web/forecast.json
+
       - name: Gravar no repositório se mudou
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/data.json
+          git add web/data.json web/forecast.json
           if git diff --cached --quiet; then
             echo "Sem mudança nos dados."
           else
-            git commit -m "data: focos do NASA FIRMS (24 h) de $(date -u '+%Y-%m-%d %H:%M') UTC"
+            git commit -m "data: focos do NASA FIRMS (24 h) e previsão do próximo mês de $(date -u '+%Y-%m-%d %H:%M') UTC"
             git pull --rebase
             git push
           fi

@@ -102,12 +102,24 @@ def build_forecast(clim: dict, live: dict, cities: dict) -> dict:
     return {"meta": meta, "cells": list(cells.values()), "municipalities": municipalities}
 
 
+def same_content(old: dict | None, new: dict) -> bool:
+    """Mesma previsão, só com outro horário de geração (evita commit a cada 3 h sem dado novo)."""
+    if not old:
+        return False
+    strip = lambda fc: {**fc, "meta": {k: v for k, v in fc.get("meta", {}).items() if k != "generated"}}
+    return strip(old) == strip(new)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("out", type=Path)
     args = ap.parse_args()
     read = lambda p: json.loads(p.read_text(encoding="utf-8"))
     fc = build_forecast(read(CLIMATOLOGY), read(WEB / "data.json"), read(WEB / "cities.json"))
+    previous = read(args.out) if args.out.exists() else None
+    if same_content(previous, fc):
+        print(f"{args.out}: sem mudança na previsão (mantido o arquivo de {previous['meta']['generated']})")
+        return
     tmp = args.out.with_suffix(".tmp")
     tmp.write_text(json.dumps(fc, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     tmp.replace(args.out)
