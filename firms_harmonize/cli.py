@@ -13,6 +13,7 @@
     python -m firms_harmonize frp-fuse        # FRP: fusão diária no pixel MODIS → frp_fused.parquet, frp_anual.csv
     python -m firms_harmonize risk-panel      # risco: painel célula 0,5° × mês com histórico e alvo de mês crítico
     python -m firms_harmonize risk-drivers    # risco: ONI, TNA (NOAA) e bioma (IBGE) no painel
+    python -m firms_harmonize risk-train      # risco: Random Forest, validação temporal e espacial
 """
 from __future__ import annotations
 
@@ -274,11 +275,40 @@ def cmd_risk_drivers(args):
     print(resumo.to_string())
 
 
+def _risk_table(rep: dict) -> pd.DataFrame:
+    rows = {"Random Forest": rep["teste"]["modelo"], **rep["teste"]["referencias"]}
+    return pd.DataFrame(rows).T[["roc_auc", "pr_auc", "brier"]].round(3)
+
+
+def cmd_risk_train(args):
+    from .config import RISK_DIR, RISK_RES, RISK_TEST_YEARS, RISK_TRAIN_YEARS
+    from .risk.model import BASE_FEATURES, ONI_FEATURES, spatial_validation, temporal_validation
+    panel = pd.read_parquet(RISK_DIR / "panel.parquet")
+    out = {}
+    for nome, feats in [("oni", ONI_FEATURES), ("base", BASE_FEATURES)]:
+        print(f"[{nome}] validação temporal ...", flush=True)
+        out[f"temporal_{nome}"] = temporal_validation(panel, feats, RISK_TRAIN_YEARS, RISK_TEST_YEARS)
+        print(f"[{nome}] validação espacial (blocos de 5°, 5 grupos) ...", flush=True)
+        out[f"espacial_{nome}"] = spatial_validation(panel, feats, RISK_TRAIN_YEARS, RISK_TEST_YEARS,
+                                                     block_deg=5.0, res=RISK_RES, n_folds=5)
+    (RISK_DIR / "validacao.json").write_text(json.dumps(out, indent=2, ensure_ascii=False))
+    for chave in ["temporal_oni", "temporal_base", "espacial_oni", "espacial_base"]:
+        print(f"\n== {chave} (teste {RISK_TEST_YEARS})")
+        print(_risk_table(out[chave]).to_string())
+    t = out["temporal_oni"]["teste"]
+    for k in ["por_ano", "por_bioma", "por_tipo"]:
+        print(f"\n[oni] {k}:")
+        print(pd.DataFrame(t[k]).T[["n", "prevalencia", "roc_auc", "pr_auc"]].round(3).to_string())
+    print("\n[oni] espacial por grupo:")
+    print(pd.DataFrame(out["espacial_oni"]["por_grupo"])[["grupo", "celulas", "n", "roc_auc", "pr_auc"]]
+          .round(3).to_string(index=False))
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="firms_harmonize")
     sub = p.add_subparsers(dest="cmd", required=True)
     for name in ["status", "boundary", "fetch-recent", "aggregate", "harmonize", "validate", "all",
-                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse", "risk-panel", "risk-drivers"]:
+                 "frp-prepare", "frp-match", "frp-calibrate", "frp-fuse", "risk-panel", "risk-drivers", "risk-train"]:
         sp = sub.add_parser(name)
         sp.add_argument("--res", type=float, default=0.25, help="lado da célula em graus")
         sp.add_argument("--min-conf", default="nominal", choices=["low", "nominal", "high"])
@@ -298,7 +328,7 @@ def main(argv=None):
            "aggregate": cmd_aggregate, "harmonize": cmd_harmonize, "validate": cmd_validate,
            "frp-prepare": cmd_frp_prepare, "frp-match": cmd_frp_match,
            "frp-calibrate": cmd_frp_calibrate, "frp-fuse": cmd_frp_fuse,
-           "risk-panel": cmd_risk_panel, "risk-drivers": cmd_risk_drivers}
+           "risk-panel": cmd_risk_panel, "risk-drivers": cmd_risk_drivers, "risk-train": cmd_risk_train}
     if a.cmd == "all":
         for f in (cmd_aggregate, cmd_harmonize, cmd_validate):
             f(a)
