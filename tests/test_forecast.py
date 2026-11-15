@@ -72,8 +72,9 @@ def test_build_forecast_ranks_municipalities_and_explains_each():
     assert [m["id"] for m in fc["municipalities"]] == ["1200013", "1500001"]      # baixa fica de fora
     top = fc["municipalities"][0]
     assert top == {"id": "1200013", "name": "Acrelândia", "uf": "AC", "cls": "high",
-                   "years": 16, "n_years": 18, "mean": 20.4, "active_cell": 3, "active_mun": 3}
-    assert ["-20", "-134", "high", 16, 20.4, 3] == [str(c) if i < 2 else c for i, c in
+                   "years": 16, "n_years": 18, "mean": 20.4, "active_cell": 3, "active_mun": 3, "prob": None}
+    assert fc["meta"]["model"] is None
+    assert ["-20", "-134", "high", 16, 20.4, 3, None] == [str(c) if i < 2 else c for i, c in
                                                      enumerate(next(c for c in fc["cells"] if c[:2] == [-20, -134]))]
 
 
@@ -83,7 +84,7 @@ def test_sample_data_does_not_count_as_active_fire():
     fc = bf.build_forecast(clim, live, _cities([("1200013", "Acrelândia", "AC", -9.8258, -66.8972)]))
     assert fc["meta"]["active_counted"] is False
     assert fc["municipalities"] == []                  # 8/18 sem fogo ativo é baixa
-    assert fc["cells"] == [[-20, -134, "low", 8, 1.0, 0]]
+    assert fc["cells"] == [[-20, -134, "low", 8, 1.0, 0, None]]
 
 
 def test_points_outside_brazil_are_ignored_and_new_fire_cells_appear():
@@ -91,7 +92,7 @@ def test_points_outside_brazil_are_ignored_and_new_fire_cells_appear():
     fora = [_point(-9.8, -66.9, mun="", uf="")] * 3
     live = _live([*fora, *[_point(-4.9, -49.9, mun="1500001", uf="PA")] * 3])
     fc = bf.build_forecast(clim, live, _cities([("1500001", "Nova", "PA", -4.95, -49.95)]))
-    assert fc["cells"] == [[-10, -100, "medium", 0, 0.0, 3]]
+    assert fc["cells"] == [[-10, -100, "medium", 0, 0.0, 3, None]]
     assert fc["municipalities"][0]["cls"] == "medium" and fc["municipalities"][0]["years"] == 0
 
 
@@ -111,3 +112,41 @@ def test_same_content_ignores_only_the_generation_time():
     assert bf.same_content(a, b) is True
     assert bf.same_content(a, c) is False
     assert bf.same_content(None, a) is False
+
+
+def _model(cells, target="2026-12"):
+    return {"target": target, "generated": "2026-11-15T13:00:00+00:00", "model": "Random Forest",
+            "train_years": [2004, 2021], "validation": {"roc_auc_temporal": 0.708, "roc_auc_spatial": 0.702},
+            "base_rate": 0.167, "data_until": "2026-11-13", "partial_scale": 2.308, "drift_factor": 0.781,
+            "cells": cells}
+
+
+@pytest.mark.parametrize("years, mean, active, prob, expected", [
+    (8, 1.0, 0, 0.35, "medium"),     # modelo ≥ 35 % sobe um nível
+    (8, 1.0, 0, 0.34, "low"),
+    (8, 1.0, 3, 0.40, "high"),       # fogo ativo e modelo: um nível cada
+    (14, 20.0, 0, 0.50, "high"),     # alta continua alta
+    (8, 1.0, 0, None, "low"),        # sem modelo
+])
+def test_classify_with_model(years, mean, active, prob, expected):
+    assert bf.classify(years, 18, mean, active, prob) == expected
+
+
+def test_model_is_used_when_its_month_matches():
+    clim = _clim({"-10,-100": _months([8, 1.0]), "-12,-100": _months([14, 20.0])})
+    cities = _cities([("1", "A", "PA", -4.9, -49.9), ("2", "B", "PA", -5.9, -49.9)])
+    fc = bf.build_forecast(clim, _live([]), cities, _model({"-10,-100": 0.41, "-12,-100": 0.05}))
+    assert fc["meta"]["model"]["min_prob"] == bf.MODEL_MIN_PROB
+    assert fc["meta"]["model"]["roc_auc_temporal"] == 0.708 and fc["meta"]["model"]["base_rate"] == 0.167
+    by_id = {m["id"]: m for m in fc["municipalities"]}
+    assert by_id["1"]["cls"] == "medium" and by_id["1"]["prob"] == 0.41
+    assert by_id["2"]["cls"] == "high" and by_id["2"]["prob"] == 0.05
+    assert [-10, -100, "medium", 8, 1.0, 0, 0.41] in fc["cells"]
+
+
+def test_model_for_another_month_is_ignored():
+    clim = _clim({"-10,-100": _months([8, 1.0])})
+    fc = bf.build_forecast(clim, _live([]), _cities([("1", "A", "PA", -4.9, -49.9)]),
+                           _model({"-10,-100": 0.9}, target="2026-11"))
+    assert fc["meta"]["model"] is None
+    assert fc["municipalities"] == [] and fc["cells"] == [[-10, -100, "low", 8, 1.0, 0, None]]

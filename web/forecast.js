@@ -54,10 +54,17 @@
     const { res } = S.fc.meta;
     const fill = { high: css('--f3'), medium: css('--f1') };
     const ring = css('--ink') || '#000';
-    S.fc.cells.forEach(([cy, cx, cls, , , active]) => {
+    const minProb = S.fc.meta.model ? S.fc.meta.model.min_prob : Infinity;
+    const accent = css('--accent');
+    S.fc.cells.forEach(([cy, cx, cls, , , active, prob]) => {
       if (cls === 'low') return;
       L.rectangle(cellBounds(cy, cx, res), { renderer, stroke: active >= ACTIVE_RING, color: ring, weight: 1.5,
         fillColor: fill[cls], fillOpacity: cls === 'high' ? 0.62 : 0.45, interactive: false }).addTo(lCells);
+      if (prob != null && prob >= minProb) {
+        const [[s, w], [n, e]] = cellBounds(cy, cx, res), pad = res * 0.12;
+        L.rectangle([[s + pad, w + pad], [n - pad, e - pad]], { renderer, color: accent, weight: 2, dashArray: '4 3',
+          fill: false, interactive: false }).addTo(lCells);
+      }
     });
   }
 
@@ -94,6 +101,9 @@
       : t('fc.reason.nohist', { month: monthName(), from, to })];
     if (m.active_mun > 0) parts.push(t('fc.reason.now', { a: num(m.active_mun) }));
     else if (m.active_cell >= ACTIVE_RING) parts.push(t('fc.reason.near', { a: num(m.active_cell) }));
+    const mod = S.fc.meta.model;
+    if (mod && m.prob != null && m.prob >= mod.min_prob)
+      parts.push(t('fc.reason.model', { p: Math.round(m.prob * 100), b: Math.round(mod.base_rate * 100), month: monthName() }));
     return parts.join(' · ');
   }
 
@@ -122,11 +132,17 @@
     const { meta } = S.fc;
     const [from, to] = meta.history_years;
     const vars = { month: monthYear(), from, to, when: when(meta.generated) };
-    $('fc-kind').textContent = t(meta.active_counted ? 'fc.kind' : 'fc.kind.noactive', vars);
+    $('fc-kind').textContent = t(meta.active_counted ? 'fc.kind' : 'fc.kind.noactive', vars) +
+      (meta.model ? t('fc.kind.model', { d: new Date(meta.model.data_until + 'T12:00:00Z').toLocaleDateString(I18N.locale(), { day: 'numeric', month: 'short', timeZone: 'UTC' }) }) : '');
+    $('fc-sw-model').hidden = !meta.model;
     $('fc-banner').dataset.state = meta.active_counted ? 'ok' : 'warn';
     const r = meta.rule;
     $('fc-rule').innerHTML = t('fc.rule', { res: meta.res, from, to, month: monthName(),
-      hs: Math.round(r.high_share * 100), hm: r.high_mean, ms: Math.round(r.medium_share * 100), mm: r.medium_mean, am: r.active_min });
+      hs: Math.round(r.high_share * 100), hm: r.high_mean, ms: Math.round(r.medium_share * 100), mm: r.medium_mean, am: r.active_min }) +
+      (meta.model ? t('fc.rule.model', { p: Math.round(meta.model.min_prob * 100), b: Math.round(meta.model.base_rate * 100),
+        month: monthName(), auc: num(meta.model.roc_auc_temporal, 2), from: meta.model.train_years[0], to: meta.model.train_years[1],
+        until: new Date(meta.model.data_until + 'T12:00:00Z').toLocaleDateString(I18N.locale(), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) })
+      : t('fc.rule.nomodel'));
     const all = S.fc.municipalities;
     $('fc-stats').textContent = t('fc.stats', { h: num(all.filter(m => m.cls === 'high').length),
       m: num(all.filter(m => m.cls === 'medium').length), c: num(S.fc.cells.filter(c => c[2] !== 'low').length) });
@@ -139,10 +155,10 @@
 
   function downloadCsv() {
     const head = ['rank', 'ibge', 'municipality', 'uf', 'level', 'years_with_fire', 'years', 'mean_hotspots',
-      'active_hotspots_municipality', 'active_hotspots_square', 'target_month', 'generated'];
+      'active_hotspots_municipality', 'active_hotspots_square', 'model_probability_worse_than_normal', 'target_month', 'generated'];
     const q = v => /[",\n;]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
     const lines = filtered().map((m, i) => [i + 1, m.id, m.name, m.uf, m.cls, m.years, m.n_years, m.mean,
-      m.active_mun, m.active_cell, S.fc.meta.target, S.fc.meta.generated].map(q).join(','));
+      m.active_mun, m.active_cell, m.prob ?? '', S.fc.meta.target, S.fc.meta.generated].map(q).join(','));
     const blob = new Blob(['﻿' + [head.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);

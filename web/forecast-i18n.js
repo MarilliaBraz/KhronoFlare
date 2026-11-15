@@ -13,7 +13,7 @@
     'fc.kind.noactive': 'Outlook for {month} · estimate from fire history {from}–{to} only: live hotspots were unavailable · updated {when}',
     'fc.fail': 'The outlook could not be loaded. Try again in a few minutes.',
     'fc.how': 'How this is calculated',
-    'fc.rule': '<p>The map is split into squares of {res}° (about 55 km). For each square we count in how many years, from {from} to {to}, satellites saw fire in {month}, and the average number of hotspots.</p><ul><li><strong>High</strong>: fire in at least {hs}% of the years and {hm} or more hotspots on average.</li><li><strong>Medium</strong>: fire in at least {ms}% of the years and {mm} or more hotspots on average.</li><li>A square with {am} or more hotspots now (NASA FIRMS, last 24 h) goes up one level.</li></ul><p>Each municipality takes the level of the square where its seat is. This is an estimate from history, not yet the project\'s risk model.</p>',
+    'fc.rule': '<p>The map is split into squares of {res}° (about 55 km). For each square we count in how many years, from {from} to {to}, satellites saw fire in {month}, and the average number of hotspots.</p><ul><li><strong>High</strong>: fire in at least {hs}% of the years and {hm} or more hotspots on average.</li><li><strong>Medium</strong>: fire in at least {ms}% of the years and {mm} or more hotspots on average.</li><li>A square with {am} or more hotspots now (NASA FIRMS, last 24 h) goes up one level.</li></ul><p>Each municipality takes the level of the square where its seat is.</p>',
     'fc.map.aria': 'Map of next-month fire outlook',
     'fc.cls.high': 'High', 'fc.cls.medium': 'Medium',
     'fc.legend.active': 'Burning now (≥ 3 hotspots)',
@@ -26,6 +26,11 @@
     'fc.empty': 'No municipality at this level here.',
     'fc.stats': '{h} municipalities high, {m} medium · {c} squares on the map',
     'fc.brazil': 'Brazil',
+    'fc.kind.model': ' · with the Random Forest model (fire data until {d})',
+    'fc.rule.model': '<p><strong>Model</strong> (Random Forest trained on {from}–{to}, ROC-AUC {auc} on years it had not seen): the chance that {month} is worse than normal in each square, meaning total fire power above what that square has in 3 out of 4 years. A square with {p}% or more (the usual is {b}%) goes up one level; it has a dashed blue outline on the map. Data until {until}; the current month is scaled to a full month and corrected for the drift of the Aqua satellite.</p>',
+    'fc.rule.nomodel': '<p>The risk model has no forecast for this month yet, so the levels come from history and active fire only.</p>',
+    'fc.reason.model': 'model: {p}% chance of a worse-than-normal {month} (usually {b}%)',
+    'fc.legend.model': 'Model: month worse than normal',
     'fc.foot': 'Prototype for NASA Space Apps 2026. Planning aid only: it shows where fire has been frequent and where it is burning now, not a guarantee of where it will happen.',
   });
   Object.assign(extra.pt, {
@@ -38,7 +43,7 @@
     'fc.kind.noactive': 'Previsão para {month} · estimativa só pelo histórico de fogo {from}–{to}: os focos ao vivo não estavam disponíveis · atualizada {when}',
     'fc.fail': 'Não foi possível carregar a previsão. Tente de novo em alguns minutos.',
     'fc.how': 'Como é calculado',
-    'fc.rule': '<p>O mapa é dividido em quadrados de {res}° (cerca de 55 km). Para cada quadrado contamos em quantos anos, de {from} a {to}, os satélites viram fogo em {month}, e a média de focos.</p><ul><li><strong>Alta</strong>: fogo em pelo menos {hs}% dos anos e média de {hm} focos ou mais.</li><li><strong>Média</strong>: fogo em pelo menos {ms}% dos anos e média de {mm} focos ou mais.</li><li>Um quadrado com {am} focos ou mais agora (NASA FIRMS, últimas 24 h) sobe um nível.</li></ul><p>Cada município recebe o nível do quadrado onde fica a sede. É uma estimativa pelo histórico, ainda não o modelo de risco do projeto.</p>',
+    'fc.rule': '<p>O mapa é dividido em quadrados de {res}° (cerca de 55 km). Para cada quadrado contamos em quantos anos, de {from} a {to}, os satélites viram fogo em {month}, e a média de focos.</p><ul><li><strong>Alta</strong>: fogo em pelo menos {hs}% dos anos e média de {hm} focos ou mais.</li><li><strong>Média</strong>: fogo em pelo menos {ms}% dos anos e média de {mm} focos ou mais.</li><li>Um quadrado com {am} focos ou mais agora (NASA FIRMS, últimas 24 h) sobe um nível.</li></ul><p>Cada município recebe o nível do quadrado onde fica a sede.</p>',
     'fc.map.aria': 'Mapa da previsão de fogo do próximo mês',
     'fc.cls.high': 'Alta', 'fc.cls.medium': 'Média',
     'fc.legend.active': 'Queimando agora (≥ 3 focos)',
@@ -51,6 +56,11 @@
     'fc.empty': 'Nenhum município neste nível aqui.',
     'fc.stats': '{h} municípios em alta, {m} em média · {c} quadrados no mapa',
     'fc.brazil': 'Brasil',
+    'fc.kind.model': ' · com o modelo Random Forest (dados de fogo até {d})',
+    'fc.rule.model': '<p><strong>Modelo</strong> (Random Forest treinado com {from}–{to}, ROC-AUC {auc} em anos que ele não viu): a chance de {month} ser pior que o normal em cada quadrado, ou seja, potência total do fogo acima do que aquele quadrado tem em 3 de cada 4 anos. Um quadrado com {p}% ou mais (o normal é {b}%) sobe um nível; no mapa ele tem contorno azul tracejado. Dados até {until}; o mês atual é ampliado para o mês inteiro e corrigido pela deriva do satélite Aqua.</p>',
+    'fc.rule.nomodel': '<p>O modelo de risco ainda não tem previsão para este mês; os níveis vêm só do histórico e do fogo ativo.</p>',
+    'fc.reason.model': 'modelo: {p}% de chance de {month} pior que o normal (costuma ser {b}%)',
+    'fc.legend.model': 'Modelo: mês pior que o normal',
     'fc.foot': 'Protótipo para o NASA Space Apps 2026. Apoio ao planejamento: mostra onde o fogo foi frequente e onde está queimando agora, sem garantia de onde ele vai acontecer.',
   });
 })();

@@ -513,3 +513,4 @@ details.cap{margin:12px 0 0}
 .fc-sw[data-cls="medium"]{background:var(--f1);opacity:.7}
 .fc-sw-active{background:transparent;border:1.5px solid var(--ink)}
 a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
+.fc-sw-model{background:transparent;border:2px dashed var(--accent)}
