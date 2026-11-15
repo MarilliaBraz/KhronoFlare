@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 import pandas as pd
 
@@ -105,3 +106,36 @@ def test_build_panel_end_to_end():
     assert {"y_critico", *FEATURES} <= set(p.columns)
     assert p["ano_alvo"].between(2004, 2007).all()
     assert not p[FEATURES].isna().any().any()
+
+
+# ---------- climatologia "deixando um ano de fora" nas linhas de treino ----------
+
+def _history_one_cell(targets_n, years, test_years=()):
+    rows = [{"cy": 0, "cx": 0, "mes_alvo": 8, "ano_alvo": y, "alvo_n": n, "alvo_frp": 10.0 * n}
+            for y, n in zip([*years, *test_years], targets_n)]
+    return pd.DataFrame(rows)
+
+
+def test_train_rows_climatology_excludes_their_own_year():
+    h = _history_one_cell([0, 2, 4, 6], years=[2004, 2005, 2006], test_years=[2017])
+    t = add_target(h, train_years=(2004, 2016)).set_index("ano_alvo")
+    # treino: anos 2004 (0 focos), 2005 (2), 2006 (4); fogo em 2 de 3 anos, média 2
+    assert t.loc[2006, "p_fogo"] == pytest.approx(0.5)        # outros anos: 2004 sem fogo, 2005 com
+    assert t.loc[2006, "n_med"] == pytest.approx(1.0)         # (0 + 2) / 2
+    assert t.loc[2004, "p_fogo"] == pytest.approx(1.0) and t.loc[2004, "n_med"] == pytest.approx(3.0)
+    # teste: climatologia completa do treino, sem nada do próprio teste
+    assert t.loc[2017, "p_fogo"] == pytest.approx(2 / 3) and t.loc[2017, "n_med"] == pytest.approx(2.0)
+
+
+def test_single_train_year_has_zero_climatology_in_its_own_row():
+    h = _history_one_cell([3, 5], years=[2004], test_years=[2017])
+    t = add_target(h, train_years=(2004, 2016)).set_index("ano_alvo")
+    assert t.loc[2004, "p_fogo"] == 0.0 and t.loc[2004, "n_med"] == 0.0
+    assert t.loc[2017, "p_fogo"] == pytest.approx(1.0) and t.loc[2017, "n_med"] == pytest.approx(3.0)
+
+
+def test_critical_threshold_still_uses_all_train_years():
+    h = _history_one_cell([0, 2, 4, 6], years=[2004, 2005, 2006], test_years=[2017])
+    t = add_target(h, train_years=(2004, 2016))
+    assert t["frp_p75"].nunique() == 1
+    assert t["frp_p75"].iloc[0] == pytest.approx(np.percentile([0.0, 20.0, 40.0], 75))

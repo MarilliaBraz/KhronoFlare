@@ -9,8 +9,10 @@ Cada linha é uma célula de `res` graus no mês t. As variáveis usam só dados
   * alvo `y_critico`: ΣFRP em t+1 acima do 75º percentil da célula naquele mês do ano (anos de treino)
     e maior que zero.
 
-A climatologia entra como variável também nas linhas de treino, onde inclui o próprio ano: isso pode
-deixar o ajuste otimista no treino, mas não afeta a avaliação nos anos de teste.
+Nas linhas de treino a climatologia "deixa o próprio ano de fora" (média dos outros anos de treino
+daquela célula e mês): incluí-lo seria pôr o rótulo dentro da variável, e o modelo aprenderia a confiar
+demais nela, perdendo desempenho no teste (revisão de 15/11/2026). Nas demais linhas, a climatologia é a
+de todos os anos de treino. O percentil 75 que define o alvo usa todos os anos de treino.
 """
 from __future__ import annotations
 
@@ -65,14 +67,23 @@ def add_history(panel: pd.DataFrame) -> pd.DataFrame:
 
 def add_target(history: pd.DataFrame, train_years: tuple[int, int]) -> pd.DataFrame:
     """Climatologia e alvo `y_critico`, com percentis e médias só dos anos de treino."""
-    train = history[history["ano_alvo"].between(*train_years)]
-    clim = train.groupby([*KEYS, "mes_alvo"]).agg(
-        p_fogo=("alvo_n", lambda s: float((s > 0).mean())),
-        n_med=("alvo_n", "mean"),
-        frp_p75=("alvo_frp", lambda s: float(np.percentile(s, CRITICAL_PERCENTILE))))
-    out = history.join(clim, on=[*KEYS, "mes_alvo"])
+    group = [*KEYS, "mes_alvo"]
+    in_train = history["ano_alvo"].between(*train_years)
+    train = history[in_train].assign(fogo=lambda d: (d["alvo_n"] > 0).astype(float))
+    g = train.groupby(group)
+    sums = pd.DataFrame({"k": g.size(), "s_fogo": g["fogo"].sum(), "s_n": g["alvo_n"].sum(),
+                         "frp_p75": g["alvo_frp"].quantile(CRITICAL_PERCENTILE / 100)})
+    out = history.join(sums, on=group)
     # Célula × mês sem nenhum ano de treino: climatologia zero (nunca queimou naquele mês no treino).
-    out = out.fillna({"p_fogo": 0.0, "n_med": 0.0, "frp_p75": 0.0})
+    out = out.fillna({"k": 0, "s_fogo": 0.0, "s_n": 0.0, "frp_p75": 0.0})
+    # Linhas de treino: tira o próprio ano das somas ("deixar um ano de fora").
+    own = in_train.to_numpy()
+    k = out["k"].to_numpy(float) - own
+    s_fogo = out["s_fogo"].to_numpy() - own * (out["alvo_n"].to_numpy() > 0)
+    s_n = out["s_n"].to_numpy() - own * out["alvo_n"].to_numpy()
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out = out.assign(p_fogo=np.where(k > 0, s_fogo / k, 0.0), n_med=np.where(k > 0, s_n / k, 0.0))
+    out = out.drop(columns=["k", "s_fogo", "s_n"])
     angle = 2 * np.pi * out["mes_alvo"] / 12
     return out.assign(
         mes_sin=np.sin(angle), mes_cos=np.cos(angle),
