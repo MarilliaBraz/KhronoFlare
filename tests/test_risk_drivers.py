@@ -199,3 +199,55 @@ def test_read_biomes_rejects_shapefile_without_code_field(tmp_path):
             z.writestr(f"B.{ext}", buf.getvalue())
     with pytest.raises(ValueError, match="COD_BIOMA"):
         read_biomes(path)
+
+# ---------- TNA (NOAA PSL, mensal) ----------
+
+from firms_harmonize.risk.drivers import add_tna, fetch_tna, parse_psl, read_tna
+
+FIX_TNA = Path(__file__).parent / "fixtures" / "tna_2009_2011.txt"
+
+
+def test_read_tna_parses_monthly_rows_and_ignores_header_and_footer():
+    tna = read_tna(FIX_TNA).set_index("ym")["valor"]
+    assert len(tna) == 36
+    assert tna[pd.Period("2010-03", "M")] == pytest.approx(1.12)
+    assert tna[pd.Period("2011-12", "M")] == pytest.approx(-0.06)
+    assert tna.index.is_monotonic_increasing and tna.index.is_unique
+
+
+def test_parse_psl_skips_missing_marker():
+    text = "  2025  2026\n 2026  0.10  0.20  -99.99  -99.99  -99.99  -99.99  -99.99  -99.99  -99.99  -99.99  -99.99  -99.99\n  -99.99\n"
+    s = parse_psl(text, "TNA").set_index("ym")["valor"]
+    assert list(s.index.astype(str)) == ["2026-01", "2026-02"]
+
+
+def test_parse_psl_rejects_text_without_monthly_rows():
+    with pytest.raises(ValueError, match="TNA"):
+        parse_psl("<html>erro</html>", "TNA")
+
+
+def test_add_tna_uses_month_t_and_mean_of_t_minus_2_to_t():
+    p = add_tna(_panel(["2010-06"]), read_tna(FIX_TNA))
+    assert p["tna_atual"].iloc[0] == pytest.approx(0.87)                      # junho, não julho (0,74)
+    assert p["tna_3m"].iloc[0] == pytest.approx((1.25 + 1.15 + 0.87) / 3)    # abr–jun
+
+
+def test_add_tna_fails_loudly_when_months_are_missing():
+    with pytest.raises(ValueError, match="TNA"):
+        add_tna(_panel(["2015-06"]), read_tna(FIX_TNA))
+
+
+def test_fetch_tna_saves_only_valid_content(tmp_path):
+    dest = tmp_path / "tna" / "tna.data"
+    assert fetch_tna(dest, session=_FakeSession(_FakeResponse(FIX_TNA.read_text()))) == dest
+    assert len(read_tna(dest)) == 36
+    bad = tmp_path / "bad.data"
+    with pytest.raises(ValueError, match="TNA"):
+        fetch_tna(bad, session=_FakeSession(_FakeResponse("<html>manutenção</html>")))
+    assert not bad.exists()
+
+
+def test_parse_psl_rejects_repeated_month():
+    row = " 2010  " + "  0.10" * 12 + "\n"
+    with pytest.raises(ValueError, match="repetido"):
+        parse_psl(row + row, "TNA")

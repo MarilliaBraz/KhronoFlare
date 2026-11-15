@@ -12,7 +12,7 @@
     python -m firms_harmonize frp-calibrate   # FRP: modelo ln V = a + b ln M + c VZA, validado fora da amostra
     python -m firms_harmonize frp-fuse        # FRP: fusão diária no pixel MODIS → frp_fused.parquet, frp_anual.csv
     python -m firms_harmonize risk-panel      # risco: painel célula 0,5° × mês com histórico e alvo de mês crítico
-    python -m firms_harmonize risk-drivers    # risco: ONI (NOAA CPC) e bioma (IBGE) no painel
+    python -m firms_harmonize risk-drivers    # risco: ONI, TNA (NOAA) e bioma (IBGE) no painel
 """
 from __future__ import annotations
 
@@ -238,20 +238,24 @@ def cmd_risk_panel(args):
 
 
 def cmd_risk_drivers(args):
-    from .config import BIOMES_FILE, ONI_FILE, RISK_DIR, RISK_RES
-    from .risk.drivers import (BIOME_CODES, add_biome, add_oni, assign_biome, fetch_biomes, fetch_oni,
-                               read_biomes, read_oni)
+    from .config import BIOMES_FILE, ONI_FILE, RISK_DIR, RISK_RES, TNA_FILE
+    from .risk.drivers import (BIOME_CODES, add_biome, add_oni, add_tna, assign_biome, fetch_biomes,
+                               fetch_oni, fetch_tna, read_biomes, read_oni, read_tna)
     if not ONI_FILE.exists():
         print("Baixando o ONI da NOAA CPC ...", flush=True)
         fetch_oni(ONI_FILE)
+    if not TNA_FILE.exists():
+        print("Baixando o TNA da NOAA PSL ...", flush=True)
+        fetch_tna(TNA_FILE)
     if not BIOMES_FILE.exists():
         print("Baixando os biomas do IBGE (geoftp) ...", flush=True)
         fetch_biomes(BIOMES_FILE)
-    oni, biomes = read_oni(ONI_FILE), read_biomes(BIOMES_FILE)
+    oni, tna, biomes = read_oni(ONI_FILE), read_tna(TNA_FILE), read_biomes(BIOMES_FILE)
     print(f"ONI: {oni['ym_fim'].min()} a {oni['ym_fim'].max()} ({len(oni)} trimestres) em {ONI_FILE}")
     panel = pd.read_parquet(RISK_DIR / "panel.parquet")
     panel = panel.drop(columns=[c for c in panel.columns if c.startswith("bioma")])  # idempotente
-    panel = add_biome(add_oni(panel, oni), biomes, RISK_RES)
+    panel = add_biome(add_tna(add_oni(panel, oni), tna), biomes, RISK_RES)
+    print(f"TNA: {tna['ym'].min()} a {tna['ym'].max()} ({len(tna)} meses) em {TNA_FILE}")
     panel.to_parquet(RISK_DIR / "panel.parquet", index=False)
     cells = assign_biome(panel[["cy", "cx"]].drop_duplicates(), biomes, RISK_RES)
     print(f"Biomas: {len(cells):,} células; {int(cells['bioma_por_proximidade'].sum())} pelo bioma mais "

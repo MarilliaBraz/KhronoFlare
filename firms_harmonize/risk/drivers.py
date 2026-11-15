@@ -1,4 +1,4 @@
-"""Fatores externos do modelo de mês crítico (passos 2 e 3).
+"""Fatores externos do modelo de mês crítico (passos 2 e 3): ONI, TNA e bioma.
 
 ONI (Oceanic Niño Index, NOAA CPC): anomalia da temperatura do mar no Niño 3.4, em médias móveis de
 três meses (DJF, JFM, ...). O ano da linha é o do mês central (NDJ 2009 = nov/2009–jan/2010).
@@ -62,18 +62,72 @@ def fetch_oni(dest: Path, session: requests.Session | None = None, url: str = ON
     return dest
 
 
-def add_oni(panel: pd.DataFrame, oni: pd.DataFrame) -> pd.DataFrame:
-    """`oni_atual`: trimestre que termina em t; `oni_3m`: média dos trimestres que terminam em t−2..t."""
-    s = oni.set_index("ym_fim")["oni"]
-    s = s.reindex(pd.period_range(s.index.min(), s.index.max(), freq="M"))
+def _add_monthly_index(panel: pd.DataFrame, series: pd.Series, prefix: str, label: str) -> pd.DataFrame:
+    """`{prefix}_atual`: valor do mês t; `{prefix}_3m`: média de t−2..t. Falha se faltar algum mês."""
+    s = series.reindex(pd.period_range(series.index.min(), series.index.max(), freq="M"))
     three = s.rolling(3, min_periods=3).mean()
     ym = pd.PeriodIndex(panel["ym"], freq="M")
     atual, media = s.reindex(ym).to_numpy(), three.reindex(ym).to_numpy()
     missing = np.isnan(atual) | np.isnan(media)
     if missing.any():
         meses = sorted({str(m) for m in ym[missing]})
-        raise ValueError(f"ONI ausente para {len(meses)} mês(es) do painel, ex.: {meses[:3]}")
-    return panel.assign(oni_atual=atual, oni_3m=media)
+        raise ValueError(f"{label} ausente para {len(meses)} mês(es) do painel, ex.: {meses[:3]}")
+    return panel.assign(**{f"{prefix}_atual": atual, f"{prefix}_3m": media})
+
+
+def add_oni(panel: pd.DataFrame, oni: pd.DataFrame) -> pd.DataFrame:
+    """`oni_atual`: trimestre que termina em t; `oni_3m`: média dos trimestres que terminam em t−2..t."""
+    return _add_monthly_index(panel, oni.set_index("ym_fim")["oni"], "oni", "ONI")
+
+
+# ---------- TNA (Tropical Northern Atlantic, NOAA PSL) ----------
+# Anomalia da temperatura do mar em 5,5°N–23,5°N, 15°W–57,5°W. Um valor por mês: a variável do mês t
+# usa o próprio mês t. Explica meses críticos na Amazônia, no Cerrado e no Pantanal bem melhor que o ONI
+# (correlação anual 0,42–0,45 contra 0,08–0,22, 2004–2021); por isso substitui o ONI no modelo.
+
+TNA_URL = "https://psl.noaa.gov/data/correlation/tna.data"
+_PSL_MISSING = -90.0  # a PSL marca meses sem dado com -99.99
+
+
+def parse_psl(text: str, label: str) -> pd.DataFrame:
+    """Formato PSL (linha "ano v1 … v12", cabeçalho e rodapé livres) → DataFrame (ym, valor)."""
+    rows = []
+    for line in text.splitlines():
+        parts = line.split()
+        if len(parts) != 13 or not parts[0].isdigit():
+            continue
+        year = int(parts[0])
+        for month, value in enumerate(parts[1:], start=1):
+            v = float(value)
+            if v > _PSL_MISSING:
+                rows.append((pd.Period(year=year, month=month, freq="M"), v))
+    if not rows:
+        raise ValueError(f"arquivo {label} sem linhas mensais no formato da NOAA PSL")
+    out = pd.DataFrame(rows, columns=["ym", "valor"]).sort_values("ym").reset_index(drop=True)
+    if out["ym"].duplicated().any():
+        raise ValueError(f"arquivo {label} com mês repetido")
+    return out
+
+
+def read_tna(path: Path) -> pd.DataFrame:
+    return parse_psl(Path(path).read_text(), "TNA")
+
+
+def fetch_tna(dest: Path, session: requests.Session | None = None, url: str = TNA_URL,
+              timeout: int = 60) -> Path:
+    """Baixa o TNA, valida e só então grava em `dest`."""
+    r = (session or requests.Session()).get(url, timeout=timeout)
+    r.raise_for_status()
+    parse_psl(r.text, "TNA")
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(r.text)
+    return dest
+
+
+def add_tna(panel: pd.DataFrame, tna: pd.DataFrame) -> pd.DataFrame:
+    """`tna_atual`: TNA do mês t; `tna_3m`: média de t−2..t."""
+    return _add_monthly_index(panel, tna.set_index("ym")["valor"], "tna", "TNA")
 
 
 # ---------- biomas ----------
