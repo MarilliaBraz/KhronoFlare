@@ -1,0 +1,79 @@
+:host {
+  display: block;
+  min-height: 100%;
+  background: #0a0c10;
+  color: #f5f5f5;
+}
+
+.phone-page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.back {
+  color: #ffb35c;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.setup,
+.screen {
+  margin-top: 24px;
+}
+
+button {
+  background: #ff7a1a;
+  color: #141820;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+.alert {
+  background: #b3121f;
+  border-radius: 16px;
+  padding: 24px;
+  animation: pulse 1.2s ease-in-out infinite alternate;
+  .badge {
+    display: inline-block;
+    background: #141820;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+}
+
+.wait {
+  color: #8a93a1;
+}
+
+ul {
+  margin-top: 24px;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: #b8c0cc;
+  li {
+    padding: 8px 0;
+    border-bottom: 1px solid #1f252f;
+  }
+}
+
+code {
+  font-family: var(--mono);
+  color: #ff9a3c;
+}
+
+@keyframes pulse {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.15);
+  }
+}

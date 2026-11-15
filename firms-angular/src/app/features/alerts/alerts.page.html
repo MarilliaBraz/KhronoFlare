@@ -1,0 +1,135 @@
+<div class="alerts">
+  <header class="top">
+    <div class="brand">
+      <a routerLink="/" class="logo-link" aria-label="Khronoflare">
+        <img class="logo-word" src="brand/khrono-flare-logo-horizontal.svg" width="180" height="26" alt="Khronoflare" />
+      </a>
+      <span>{{ t('alerts.title') }}</span>
+    </div>
+    <nav>
+      <a routerLink="/">{{ t('nav.explorer') }}</a>
+      <a routerLink="/alerts" class="on">{{ t('nav.alerts') }}</a>
+      <a routerLink="/outlook">{{ t('nav.outlook') }}</a>
+      <a routerLink="/phone">Phone</a>
+      <button type="button" (click)="i18n.setLang(i18n.lang() === 'en' ? 'pt' : 'en')">{{ i18n.lang() === 'en' ? 'PT' : 'EN' }}</button>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <section class="queue">
+      <div class="filters">
+        <button type="button" [class.on]="alerts.filter() === 'all'" (click)="alerts.filter.set('all')">{{ t('alerts.filter.all') }}</button>
+        <button type="button" [class.on]="alerts.filter() === 'open'" (click)="alerts.filter.set('open')">{{ t('alerts.filter.open') }}</button>
+        <button type="button" [class.on]="alerts.filter() === 'active'" (click)="alerts.filter.set('active')">{{ t('alerts.filter.active') }}</button>
+      </div>
+      <label class="juris">
+        {{ t('alerts.yourArea') }}
+        <select [ngModel]="alerts.jurisdiction()" (ngModelChange)="alerts.jurisdiction.set($event)">
+          @for (uf of alerts.ufs(); track uf) {
+            <option [value]="uf">{{ uf === 'ALL' ? t('alerts.area.all') : uf }}</option>
+          }
+        </select>
+      </label>
+      <ul>
+        @for (c of alerts.filtered(); track c.id) {
+          <li>
+            <button type="button" [class.sel]="alerts.selectedId() === c.id" (click)="alerts.select(c.id)">
+              <span class="name">{{ c.name }} <small>{{ c.uf }}</small></span>
+              <span class="meta">
+                <span class="tier" [attr.data-t]="c.tier">{{ c.tier }}</span>
+                <span class="st">{{ statusOf(c) }}</span>
+                <span class="mono">n={{ c.n }} FRP={{ c.frpMax | number: '1.0-0' }}</span>
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="case">
+      @if (alerts.selected(); as c) {
+        @if (alerts.selectedCase(); as ac) {
+          <h2>{{ c.name }} <span class="uf">{{ c.uf }}</span></h2>
+          <p class="sub">Priority {{ c.tier }} · {{ c.n }} hotspots · high conf {{ c.high }} · FRP max {{ c.frpMax | number: '1.1-1' }}</p>
+          <p class="harm" [class.awaiting]="!data.harmonizedMunReady()">
+            {{ t('alerts.harm.frp') }}:
+            {{ fmtHarm(c.id, 'frp') }}
+            · {{ t('alerts.harm.anomaly') }}:
+            {{ fmtHarm(c.id, 'anom') }}
+          </p>
+          <div class="status">Status: <b>{{ ac.status }}</b></div>
+
+          @if (ac.status === 'new') {
+            <button type="button" class="primary" (click)="alerts.startDraft()">{{ t('alerts.draft') }}</button>
+            <button type="button" class="ghost" (click)="alerts.dismiss()">{{ t('alerts.dismiss') }}</button>
+          }
+
+          @if (ac.status === 'draft' || ac.status === 'pending') {
+            <div class="form">
+              <label>Level
+                <select [ngModel]="ac.draft.level" (ngModelChange)="alerts.updateDraft({ level: $event })">
+                  <option value="moderate">moderate</option>
+                  <option value="severe">severe</option>
+                  <option value="extreme">extreme</option>
+                </select>
+              </label>
+              <label>Event <input [ngModel]="ac.draft.event" (ngModelChange)="alerts.updateDraft({ event: $event })" /></label>
+              <label>Action <textarea [ngModel]="ac.draft.action" (ngModelChange)="alerts.updateDraft({ action: $event })"></textarea></label>
+              <label>Area <input [ngModel]="ac.draft.area" (ngModelChange)="alerts.updateDraft({ area: $event })" /></label>
+              <label>Author <input [ngModel]="ac.draft.author" (ngModelChange)="alerts.updateDraft({ author: $event })" /></label>
+              @if (ac.status === 'pending') {
+                <label>Approver <input [ngModel]="ac.draft.approver" (ngModelChange)="alerts.updateDraft({ approver: $event })" /></label>
+                <fieldset>
+                  <legend>Checks</legend>
+                  <label><input type="checkbox" [ngModel]="ac.draft.checks.imagery" (ngModelChange)="setCheck('imagery', $event)" /> Imagery reviewed</label>
+                  <label><input type="checkbox" [ngModel]="ac.draft.checks.population" (ngModelChange)="setCheck('population', $event)" /> Population assessed</label>
+                  <label><input type="checkbox" [ngModel]="ac.draft.checks.duplicate" (ngModelChange)="setCheck('duplicate', $event)" /> Not a duplicate</label>
+                </fieldset>
+              }
+            </div>
+            @if (ac.status === 'draft') {
+              <button type="button" class="primary" (click)="alerts.submit()">{{ t('alerts.submit') }}</button>
+            }
+            @if (ac.status === 'pending') {
+              <button type="button" class="primary" (click)="alerts.approve()">{{ t('alerts.approve') }}</button>
+              <button type="button" class="ghost" (click)="alerts.returnToDraft()">{{ t('alerts.return') }}</button>
+            }
+          }
+
+          @if (ac.status === 'sent') {
+            <button type="button" class="danger" (click)="alerts.cancel()">{{ t('alerts.cancel') }}</button>
+          }
+
+          <div class="phone-box">
+            <h3>Phone / ntfy</h3>
+            <p class="mono">{{ ntfy.topic() }}</p>
+            <p>{{ ntfy.status() }}</p>
+            <label><input type="checkbox" [ngModel]="ntfy.enabled()" (ngModelChange)="ntfy.enabled.set($event)" /> Send approved alerts</label>
+            <button type="button" (click)="ntfy.sendTest()">{{ t('phone.test') }}</button>
+            <a routerLink="/phone" [queryParams]="{ t: ntfy.topic() }">Open receiver</a>
+          </div>
+        }
+      } @else {
+        <p class="empty">Select a municipality from the queue.</p>
+      }
+    </section>
+
+    <section class="side">
+      <h3>{{ t('alerts.activity') }}</h3>
+      <ul class="log">
+        @for (e of alerts.activity(); track e.id) {
+          <li><time>{{ e.at | date: 'short' }}</time> {{ e.message }}</li>
+        } @empty {
+          <li class="muted">No activity yet.</li>
+        }
+      </ul>
+      <h3>{{ t('alerts.cap') }}</h3>
+      @if (alerts.lastCap()) {
+        <pre>{{ alerts.lastCap() }}</pre>
+        <button type="button" (click)="copyCap()">Copy</button>
+      } @else {
+        <p class="muted">Approve an alert to generate CAP XML.</p>
+      }
+    </section>
+  </div>
+</div>

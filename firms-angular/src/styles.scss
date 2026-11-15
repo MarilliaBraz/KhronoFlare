@@ -1,0 +1,60 @@
+:root {
+  --bg: #07090e;
+  --text: #e8ebf0;
+  --header: #0b0e16;
+  --header-border: #1c2433;
+  --line: #2b313b;
+  --accent: #ff7a1a;
+  --accent-hot: #ff4500;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --footer-h: auto;
+  --panel-w: 320px;
+  color-scheme: dark;
+  accent-color: var(--accent);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+app-root {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
+a {
+  color: #ffb35c;
+}
+
+.leaflet-container {
+  background: #1a2016;
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid #ffb35c;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,9 +1,14 @@
-data/
+/data/
 .env
 *.pyc
 __pycache__/
 .venv/
 .pytest_cache/
+
+# Angular app (firms-angular)
+firms-angular/node_modules/
+firms-angular/dist/
+firms-angular/.angular/
 
 # Dados brutos do NASA FIRMS (grandes demais para o GitHub, limite de 100 MB por arquivo)
 DL_FIRE_*/

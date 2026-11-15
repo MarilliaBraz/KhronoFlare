@@ -1,0 +1,85 @@
+<div class="outlook">
+  <header class="top">
+    <div class="brand">
+      <a routerLink="/" class="logo-link" aria-label="Khronoflare">
+        <img class="logo-word" src="brand/khrono-flare-logo-horizontal.svg" width="180" height="26" alt="Khronoflare" />
+      </a>
+      <span>{{ t('outlook.title') }}</span>
+    </div>
+    <nav>
+      <a routerLink="/">{{ t('nav.explorer') }}</a>
+      <a routerLink="/alerts">{{ t('nav.alerts') }}</a>
+      <a routerLink="/outlook" class="on">{{ t('nav.outlook') }}</a>
+    </nav>
+  </header>
+
+  @if (data.forecast(); as f) {
+    <div class="banner">
+      <div>
+        <h1>Target {{ f.meta.target }}</h1>
+        <p>
+          {{ f.meta.kind }} · {{ f.meta.n_years }} history years · res {{ f.meta.res }}°
+          @if (f.meta.model; as m) {
+            · {{ m.name }} (AUC temporal {{ m.roc_auc_temporal }})
+          }
+        </p>
+      </div>
+      <div class="stats">
+        <div><b>{{ cellStats().high }}</b> high cells</div>
+        <div><b>{{ cellStats().medium }}</b> medium</div>
+        <div><b>{{ cellStats().low }}</b> low</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <label>UF
+        <select [ngModel]="uf()" (ngModelChange)="uf.set($event)">
+          @for (u of ufs(); track u) {
+            <option [value]="u">{{ u }}</option>
+          }
+        </select>
+      </label>
+      <label>Class
+        <select [ngModel]="cls()" (ngModelChange)="cls.set($event)">
+          <option value="all">all</option>
+          <option value="high">high</option>
+          <option value="medium">medium</option>
+        </select>
+      </label>
+      <button type="button" class="primary" (click)="exportCsv()">{{ t('outlook.export') }}</button>
+    </div>
+
+    <div class="grid">
+      <div class="map-proxy">
+        <p>Cell outlook ({{ f.cells.length }} cells). High/medium priorities listed for municipalities.</p>
+        <div class="legend">
+          <span class="h">high</span>
+          <span class="m">medium</span>
+          <span class="l">low</span>
+        </div>
+      </div>
+      <div class="list">
+        <table>
+          <thead>
+            <tr><th>Municipality</th><th>UF</th><th>Class</th><th>Mean</th><th>Prob</th><th>Active</th></tr>
+          </thead>
+          <tbody>
+            @for (m of rows(); track m.id) {
+              <tr>
+                <td>{{ m.name }}</td>
+                <td>{{ m.uf }}</td>
+                <td><span class="cls" [attr.data-c]="m.cls">{{ m.cls }}</span></td>
+                <td class="mono">{{ m.mean | number: '1.1-1' }}</td>
+                <td class="mono">{{ m.prob == null ? '—' : (m.prob | number: '1.2-2') }}</td>
+                <td class="mono">{{ m.active_mun }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <button type="button" class="ghost" (click)="showMore()">Show more</button>
+      </div>
+    </div>
+  } @else {
+    <p class="loading">{{ t('loading') }}</p>
+  }
+</div>

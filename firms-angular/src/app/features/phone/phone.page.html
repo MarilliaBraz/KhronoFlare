@@ -1,0 +1,30 @@
+<div class="phone-page">
+  <a routerLink="/alerts" class="back">← Alerts</a>
+
+  @if (!ready()) {
+    <div class="setup">
+      <h1>Khronoflare phone receiver</h1>
+      <p>Channel <code>{{ ntfy.topic() }}</code></p>
+      <p>Tap below to allow sound and vibration, then keep this page open.</p>
+      <button type="button" (click)="start()">Start receiving alerts</button>
+    </div>
+  } @else {
+    <div class="screen">
+      @if (active(); as a) {
+        <div class="alert" role="alert">
+          <div class="badge">SIMULATION</div>
+          <h2>{{ a.title }}</h2>
+          <p>{{ a.message }}</p>
+          <button type="button" (click)="dismiss()">Dismiss</button>
+        </div>
+      } @else {
+        <p class="wait">Listening for alerts…</p>
+      }
+      <ul>
+        @for (h of history(); track h.id) {
+          <li><strong>{{ h.title }}</strong> — {{ h.message }}</li>
+        }
+      </ul>
+    </div>
+  }
+</div>
