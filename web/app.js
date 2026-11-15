@@ -106,64 +106,81 @@ function main(D) {
       || `<li class="empty">${t(S.filter==='open'?'q.empty.open':'q.empty.active')}</li>`;
   }
 
-  /* ---------- map ---------- */
-  const SVGNS='http://www.w3.org/2000/svg';
-  const KX = Math.cos(8*Math.PI/180);
-  const px = lon => lon*KX*100, py = lat => -lat*100;
-  const svg=document.getElementById('map');
-  let VB=null, anim=null;
-  function pathD(geom){ return geom.map(poly=>poly.map(r=>'M'+r.map(([x,y])=>px(x).toFixed(1)+' '+py(y).toFixed(1)).join('L')+'Z').join('')).join(''); }
-  function ringD(r){ return 'M'+r.map(([x,y])=>px(x).toFixed(1)+' '+py(y).toFixed(1)).join('L')+'Z'; }
+  /* ---------- map (Leaflet + NASA GIBS imagery) ---------- */
+  const SAT_DATE = '2026-11-12';                       // day of the FIRMS sample shown on the map
+  const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
+  const BASES = {
+    sat:    {path:`VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${SAT_DATE}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`, max:9, credit:'VIIRS NOAA-20 true color'},
+    relief: {path:'BlueMarble_ShadedRelief_Bathymetry/default/2004-08-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg', max:8, credit:'Blue Marble'},
+    night:  {path:'VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png', max:8, credit:'VIIRS Black Marble'},
+  };
+  const BRAZIL = L.latLngBounds([-34, -74.5], [5.5, -33]);
+  const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ll = ring => ring.map(([x,y]) => [y,x]);       // data is [lon, lat]; Leaflet wants [lat, lon]
+  const geomLL = geom => geom.map(poly => poly.map(ll));
   const fireColor = f => f>40?'var(--f3)':f>=10?'var(--f2)':'var(--f1)';
-  function el(tag, attrs){ const e=document.createElementNS(SVGNS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
-  let gStates, gMun, gArea, gPts;
+  const map = L.map('map', {zoomControl:false, minZoom:3, maxZoom:11, zoomSnap:0.25, maxBounds:BRAZIL.pad(0.6), attributionControl:true});
+  map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
+  const zoomCtl = L.control.zoom({position:'bottomright'}).addTo(map);
+  let baseKey = (()=>{ try { return localStorage.getItem('hac-base'); } catch(e){ return null; } })();
+  if(!BASES[baseKey]) baseKey='sat';
+  let baseLayer=null, tileErrors=0;
+  const lStates=L.layerGroup().addTo(map), lSel=L.layerGroup().addTo(map), lPts=L.layerGroup().addTo(map);
+  function setBase(key){
+    baseKey=key; try { localStorage.setItem('hac-base', key); } catch(e){}
+    if(baseLayer) map.removeLayer(baseLayer);
+    const b=BASES[key]; tileErrors=0;
+    baseLayer=L.tileLayer(GIBS+b.path, {maxNativeZoom:b.max, maxZoom:11, bounds:BRAZIL.pad(0.6),
+      attribution:`<a href="https://earthdata.nasa.gov/gibs" target="_blank" rel="noopener">NASA GIBS</a> ${b.credit} · IBGE`});
+    baseLayer.on('tileerror', ()=>{ if(++tileErrors===4) offline(true); });
+    baseLayer.on('load', ()=>{ if(tileErrors<4) offline(false); });
+    baseLayer.addTo(map).bringToBack();
+    document.querySelectorAll('[data-base]').forEach(btn=>btn.setAttribute('aria-pressed', String(btn.dataset.base===key)));
+  }
+  // Without imagery (no internet at the demo) the states get a solid fill, so the map still reads.
+  function offline(on){ document.getElementById('mapnote').hidden=!on; document.getElementById('map').classList.toggle('nobase', on);
+    lStates.eachLayer(l=>l.setStyle({fillOpacity:on?1:0})); }
   function buildMap(){
-    svg.innerHTML='';
-    gStates=el('g',{}); gMun=el('g',{}); gArea=el('g',{}); gPts=el('g',{});
-    D.states.forEach(s=>{ const p=el('path',{d:pathD(s.g), fill:'var(--land)', stroke:'var(--land-line)', 'stroke-width':'1', 'vector-effect':'non-scaling-stroke'}); gStates.appendChild(p); });
-    svg.append(gStates,gMun,gArea,gPts);
-    setVB(brazilVB(), false);
+    D.states.forEach(s=>L.polygon(geomLL(s.g), {color:'#ffffff', opacity:.55, weight:1, fillColor:'#1f272c', fillOpacity:0, interactive:false}).addTo(lStates));
+    setBase(baseKey);
+    map.fitBounds(BRAZIL, {animate:false});
   }
-  function brazilVB(){ return [px(-75), py(6), px(-33)-px(-75), py(-34.5)-py(6)]; }
-  function fitVB(b){ const pad=0.25*Math.max(b[2]-b[0], b[3]-b[1])+0.05; const x0=px(b[0]-pad), x1=px(b[2]+pad), y0=py(b[3]+pad), y1=py(b[1]-pad);
-    const cw=svg.clientWidth, ch=svg.clientHeight, r=(cw>0&&ch>0)?cw/ch:1.2; let w=x1-x0, h=y1-y0; if(w/h<r){ const nw=h*r; return [x0-(nw-w)/2,y0,nw,h]; } const nh=w/r; return [x0,y0-(nh-h)/2,w,nh]; }
-  function setVB(target, animate){
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if(!VB || !animate || reduce){ VB=target; svg.setAttribute('viewBox', VB.join(' ')); svg.setAttribute('preserveAspectRatio','xMidYMid meet'); drawPoints(); return; }
-    const from=VB.slice(), t0=performance.now(); cancelAnimationFrame(anim);
-    const step=now=>{ const k=Math.min(1,(now-t0)/450), e=1-Math.pow(1-k,3); VB=from.map((v,i)=>v+(target[i]-v)*e); svg.setAttribute('viewBox',VB.join(' ')); drawPoints(); if(k<1) anim=requestAnimationFrame(step); };
-    anim=requestAnimationFrame(step);
+  function fireIcon(p, faded){
+    const r=2.6+Math.min(5.5,Math.sqrt(p.frp)*0.8), s=Math.ceil(r*2.6)+2, c=s/2, k=r*1.25;
+    const shape = p.sensor==='VIIRS' ? `<circle cx="${c}" cy="${c}" r="${r}"/>` : `<path d="M${c} ${c-k}L${c+k} ${c}L${c} ${c+k}L${c-k} ${c}Z"/>`;
+    return L.divIcon({className:'fire', iconSize:[s,s], html:`<svg width="${s}" height="${s}" aria-hidden="true" style="fill:${fireColor(p.frp)};fill-opacity:${faded?0.35:0.95};stroke:#10161a;stroke-width:1">${shape}</svg>`});
   }
-  function unit(){ const w=svg.clientWidth||600, h=svg.clientHeight||500; return Math.max(VB[2]/w, VB[3]/h); }
   function drawPoints(){
-    const u=unit(); gPts.innerHTML='';
-    const frag=document.createDocumentFragment();
+    lPts.clearLayers();
     D.points.forEach(p=>{
-      const x=px(p.lon), y=py(p.lat);
-      if(!p.uf){ frag.appendChild(el('circle',{cx:x,cy:y,r:2.2*u,fill:'var(--outside)'})); return; }
-      const r=(2.6+Math.min(5.5,Math.sqrt(p.frp)*0.8))*u, col=fireColor(p.frp);
-      const sel = S.sel && p.mun===S.sel;
-      const shape = p.sensor==='VIIRS' ? el('circle',{cx:x,cy:y,r}) : el('path',{d:`M${x} ${y-r*1.25}L${x+r*1.25} ${y}L${x} ${y+r*1.25}L${x-r*1.25} ${y}Z`});
-      shape.setAttribute('fill',col); shape.setAttribute('fill-opacity', S.sel && !sel ? '0.35':'0.9');
-      shape.setAttribute('stroke','var(--panel)'); shape.setAttribute('stroke-width', String(0.8*u));
-      shape.style.cursor='pointer'; shape.dataset.id=p.mun;
-      const tt=el('title',{}); tt.textContent=t('map.tip',{sensor:p.sensor, sat:p.sat, frp:fmt1(p.frp), time:hhmm(p.time), conf:p.conf}); shape.appendChild(tt);
-      frag.appendChild(shape);
+      if(!p.uf){ L.circleMarker([p.lat,p.lon], {radius:2.5, color:'#000', weight:.5, fillColor:'#9aa4aa', fillOpacity:.8, interactive:false}).addTo(lPts); return; }
+      const m=L.marker([p.lat,p.lon], {icon:fireIcon(p, S.sel && p.mun!==S.sel), keyboard:false, riseOnHover:true,
+        title:t('map.tip',{sensor:p.sensor, sat:p.sat, frp:fmt1(p.frp), time:hhmm(p.time), conf:p.conf})});
+      m.on('click', ()=>{ if(byId[p.mun]) select(p.mun); });
+      m.addTo(lPts);
     });
-    gPts.appendChild(frag);
   }
   function drawSelection(){
-    gMun.innerHTML=''; gArea.innerHTML='';
+    lSel.clearLayers();
     if(!S.sel) return;
-    const c=byId[S.sel], it=item(c.id);
-    gMun.appendChild(el('path',{d:pathD(c.geom), fill:'var(--mun)', stroke:'var(--ink)', 'stroke-width':'1.5', 'vector-effect':'non-scaling-stroke'}));
+    const c=byId[S.sel], it=item(c.id), g=geomLL(c.geom);
+    L.polygon(g, {color:'#000', opacity:.6, weight:4.5, fill:false, interactive:false}).addTo(lSel);   // halo for imagery
+    L.polygon(g, {color:'#fff', weight:2, fillColor:'#fff', fillOpacity:.06, interactive:false}).addTo(lSel);
     if(it.status==='new' || it.status==='dismissed') return;
     const active = it.status==='sent';
-    const d = it.areaMode==='hull' ? ringD(c.poly) : pathD(c.geom);
-    const col = it.status==='cancelled' ? 'var(--watch)' : it.level==='extreme' ? 'var(--extreme)' : 'var(--severe)';
-    gArea.appendChild(el('path',{d, fill:col, 'fill-opacity': active?'0.22':'0.10', stroke:col, 'stroke-width':'2', 'stroke-dasharray': active?'':'6 4', 'vector-effect':'non-scaling-stroke'}));
+    const col = it.status==='cancelled' ? '#9aa8b0' : it.level==='extreme' ? '#ff5a3c' : '#ffb547';
+    const area = it.areaMode==='hull' ? [ll(c.poly)] : g;
+    L.polygon(area, {color:col, weight:2.5, dashArray: active?null:'7 5', fillColor:col, fillOpacity: active?0.25:0.12, interactive:false}).addTo(lSel);
   }
-  svg.addEventListener('click', e=>{ const id=e.target.dataset && e.target.dataset.id; if(id && id!=='null' && byId[id]) select(id); });
+  function fitTo(id){
+    const opts={paddingTopLeft:[30,50], paddingBottomRight:[30,60], maxZoom:10, animate:!reduceMotion()};  // room for title, tools and legend
+    if(id){ const b=byId[id].bbox; map.fitBounds([[b[1],b[0]],[b[3],b[2]]], opts); } else map.fitBounds(BRAZIL, opts);
+  }
+  function renderMapControls(){
+    const zi=zoomCtl.getContainer().querySelector('.leaflet-control-zoom-in'), zo=zoomCtl.getContainer().querySelector('.leaflet-control-zoom-out');
+    zi.title=t('map.zoomin'); zi.setAttribute('aria-label', t('map.zoomin')); zo.title=t('map.zoomout-btn'); zo.setAttribute('aria-label', t('map.zoomout-btn'));
+  }
+  document.querySelectorAll('[data-base]').forEach(btn=>btn.addEventListener('click', ()=>setBase(btn.dataset.base)));
 
   /* ---------- side panel ---------- */
   function renderSide(){
@@ -347,7 +364,7 @@ function main(D) {
     try{ navigator.clipboard.writeText(S.lastCap).then(done,fallback); }catch(e){ fallback(); } };
 
   /* ---------- actions ---------- */
-  function select(id){ S.sel=id; renderQueue(); drawSelection(); renderSide(); renderMapTitle(); setVB(id ? fitVB(byId[id].bbox) : brazilVB(), true); }
+  function select(id){ S.sel=id; renderQueue(); drawSelection(); renderSide(); renderMapTitle(); drawPoints(); fitTo(id); }
   function renderMapTitle(){ document.getElementById('maptitle').textContent = S.sel ? `${byId[S.sel].name}, ${byId[S.sel].uf}` : t('map.brazil'); }
   function startDraft(c,it){ if(c.uf!==S.juris) return; it.status='draft'; it.lang='pt'; addLog(analyst(), ['log.started',{name:c.name, uf:c.uf}]); }
   function act(name){
@@ -408,7 +425,7 @@ function main(D) {
   document.getElementById('zoom-out').onclick=()=>select(null);
   const renderSound = () => { document.getElementById('sound').textContent=t(S.sound?'sound.on':'sound.off'); };
   document.getElementById('sound').onclick=()=>{ S.sound=!S.sound; renderSound(); };
-  window.addEventListener('resize', ()=>{ if(VB) setVB(S.sel?fitVB(byId[S.sel].bbox):brazilVB(), false); });
+  window.addEventListener('resize', ()=>map.invalidateSize());
 
   /* ---------- tabs, how-to, remembered sections ---------- */
   const TABS=['phone','real','log'];
@@ -427,7 +444,7 @@ function main(D) {
   const inBr=D.points.filter(p=>p.uf).length;
   const renderMapStats = () => { document.getElementById('mapstats').textContent = t('map.stats',{n:fmtInt(inBr), m:D.cands.length, o:fmtInt(D.points.length-inBr)}); };
   // Everything drawn by this file is redrawn when the interface language changes; an open dialog is closed.
-  function renderTexts(){ renderJuris(); renderSound(); renderPhoneCap(); renderMapStats(); renderMapTitle(); renderQueue(); renderSide(); renderLog(); renderPhoneClock(); if(VB) drawPoints(); }
+  function renderTexts(){ renderJuris(); renderSound(); renderPhoneCap(); renderMapStats(); renderMapTitle(); renderQueue(); renderSide(); renderLog(); renderPhoneClock(); renderMapControls(); drawPoints(); }
   I18N.onChange(()=>{ if(!document.getElementById('sheet').hidden) closeSheet(); renderTexts(); });
   buildMap(); renderTexts(); setInterval(renderPhoneClock, 15000);
   select((D.cands.find(c=>c.uf===S.juris)||D.cands[0]).id);

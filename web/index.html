@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://ntfy.sh; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://gibs.earthdata.nasa.gov; connect-src 'self' https://ntfy.sh; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hotspot Alert Console</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -44,8 +45,16 @@
 
   <section class="panel" aria-labelledby="m-h">
     <h2 id="m-h" class="vh" data-i18n="map.h">Map</h2>
-    <div class="mapwrap"><div class="maptitle" id="maptitle">Brazil</div><svg id="map" role="img" aria-label="Map of fire detections" data-i18n-attr="aria-label:map.aria"></svg>
-      <button class="btn sm mapzoom" id="zoom-out" data-i18n="map.zoomout">All of Brazil</button>
+    <div class="mapwrap"><div class="maptitle" id="maptitle">Brazil</div><div id="map" role="region" aria-label="Map of fire detections" data-i18n-attr="aria-label:map.aria"></div>
+      <div class="maptools">
+        <button class="btn sm" id="zoom-out" data-i18n="map.zoomout">All of Brazil</button>
+        <div class="basemaps" role="group" aria-label="Map background" data-i18n-attr="aria-label:base.group">
+          <button data-base="sat" aria-pressed="true" data-i18n="base.sat">Satellite, 12 Nov</button>
+          <button data-base="relief" aria-pressed="false" data-i18n="base.relief">Relief</button>
+          <button data-base="night" aria-pressed="false" data-i18n="base.night">Night lights</button>
+        </div>
+      </div>
+      <p class="mapnote" id="mapnote" hidden data-i18n="base.offline">Satellite imagery is not loading. Showing state outlines only.</p>
       <div class="legend">
         <span class="lg"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="var(--f2)"/></svg>VIIRS</span>
         <span class="lg"><svg width="12" height="12" aria-hidden="true"><path d="M6 1L11 6L6 11L1 6Z" fill="var(--f2)"/></svg>MODIS</span>
@@ -124,6 +133,7 @@
 <footer class="foot"><p data-i18n="foot.1">Prototype for NASA Space Apps 2026. Only civil protection can send real alerts.</p>
   <p data-i18n-html="foot.2">Data: NASA FIRMS near-real-time sample (Terra/Aqua MODIS, NOAA-20 VIIRS) and IBGE boundaries. The priority score is provisional; harmonized intensity and how unusual each fire is will come from <code>firms_harmonize</code>.</p></footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="i18n.js"></script>
 <script src="prefs.js"></script>
 <script src="ntfy.js"></script>

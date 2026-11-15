@@ -382,3 +382,25 @@ details.cap{margin:12px 0 0}
 /* larger text: let filters and long names wrap instead of overflowing */
 .filters{flex-wrap:wrap}
 :root:not([data-fs="0"]) .qname{white-space:normal}
+
+/* ===== Leaflet map with NASA GIBS imagery ===== */
+#map{background:#0b1013;font:inherit}
+.grid .mapwrap{display:flex;flex-direction:column}
+.grid .mapwrap #map{flex:1}
+.maptitle,.maptools,.legend,.mapnote{z-index:1000}
+.mapzoom{position:static}
+.maptools{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.basemaps{display:inline-flex;gap:2px;padding:2px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.basemaps button{border:0;background:none;border-radius:6px;padding:4px 9px;font-size:calc(12px * var(--fs));font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+.basemaps button:hover{color:var(--ink)}
+.basemaps button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.mapnote{position:absolute;left:50%;top:52px;transform:translateX(-50%);margin:0;max-width:80%;background:var(--severe-soft);color:var(--ink);border:1px solid var(--severe);border-radius:6px;padding:5px 10px;font-size:calc(12px * var(--fs))}
+.leaflet-div-icon.fire{background:none;border:0}
+.leaflet-container .leaflet-control-attribution{background:color-mix(in srgb,var(--panel) 85%,transparent);color:var(--muted);font-size:calc(10.5px * var(--fs))}
+.leaflet-container .leaflet-control-attribution a{color:var(--accent)}
+.leaflet-bar a{background:var(--panel);color:var(--ink);border-bottom-color:var(--line)}
+.leaflet-bar a:hover{background:var(--sunk)}
+.leaflet-container a.leaflet-disabled{background:var(--sunk);color:var(--muted)}
+.leaflet-control-zoom{border:1px solid var(--line)!important}
+.legend{bottom:10px}
+@media (max-width:760px){.maptools{top:auto;bottom:40px}.basemaps button{padding:4px 7px}}
