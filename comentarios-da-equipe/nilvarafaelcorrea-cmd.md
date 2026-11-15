@@ -4,8 +4,8 @@
 
 ## Quem sou e qual foi meu papel no projeto
 
-Sou Nilva Pereira Barbosa, contribui com pesquisa e estrutura da proposta do KHRONOFLARE, um aplicativo web voltado à harnonização de registros de focos ativos MODIS e VIIRS em um calendário de atividade de queimadas para o Brasil.
-Meu papel foi ajudar a tranformar o desafio em uma proposta compreensivel e relevante para os usários, conectando o problema apresentado a MVP e os beneficios esperados.
+Sou Nilva Pereira Barbosa, estudante iniciante em tecnoligia em Big Data e Inteligência Artificial pela PUC GO, apaixonada pelo empreendedorismo feminino, contribui com pesquisa e estrutura da proposta do KHRONOFLARE, um aplicativo web voltado à harnonização de registros de focos ativos MODIS e VIIRS em um calendário de atividade de queimadas para o Brasil.
+Meu papel foi ajudar a tranformar o desafio em uma proposta compreensivel, pesquisas de informações e relevante para os usários, conectando o problema apresentado a MVP e os beneficios esperados.
 
 ## O que eu fiz
 Pesquisei e organizei informações sobre o desafio de harmonização dos registros MODIS e VIIRS.
