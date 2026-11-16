@@ -113,3 +113,7 @@ AI assistants (Claude Code, Cursor) helped write code, tests and documentation. 
 ## Team
 
 [@MarilliaBraz](https://github.com/MarilliaBraz) · [@ERICASSOUSA](https://github.com/ERICASSOUSA) · [@jhenniferdepaula](https://github.com/jhenniferdepaula) · [@nilvarafaelcorrea-cmd](https://github.com/nilvarafaelcorrea-cmd) · [@prof-outro-planeta](https://github.com/prof-outro-planeta) · [@VictorinoMatias](https://github.com/VictorinoMatias)
+
+## License
+
+Code released under the [MIT License](LICENSE). Data products keep the terms of their sources (NASA FIRMS and GIBS are open; IBGE and NOAA data follow their own open-data policies).
