@@ -230,7 +230,7 @@ Regra para o app: usar **SP até o max_date do SP** e **NRT depois**. Consultar 
 
 Teste em 12/11/2026, retângulo do Brasil: NOAA-20 NRT = 6.721 focos; MODIS NRT (Terra+Aqua) = 1.492 focos, cerca de **4,5×** mais no VIIRS, coerente com a literatura. O retângulo inclui países vizinhos (ex.: Chile), então é preciso recortar pelo polígono do Brasil.
 
-## Pedidos feitos ao FIRMS Archive Download (14/11/2026, conta marillia.dev@gmail.com, Brasil, CSV)
+## Pedidos feitos ao FIRMS Archive Download (14/11/2026, Brasil, CSV)
 | ID | Fonte | Período |
 |---|---|---|
 | 846226 | MODIS C6.1 | 01/11/2000 – 13/11/2026 |
